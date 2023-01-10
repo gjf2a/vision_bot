@@ -1,0 +1,22 @@
+[package]
+name = "native"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+particle_filter = {git = "https://github.com/gjf2a/particle_filter"}
+kmeans = {git = "https://github.com/gjf2a/kmeans"}
+knn = {git = "https://github.com/gjf2a/knn"}
+supervised_learning = {git = "https://github.com/gjf2a/supervised_learning"}
+flutter_rust_bridge = "1.59"
+lazy_static = "1.4.0"
+rand = "0.8"
+ordered-float = "3"
+float_extras = "0.1.6"
+image = "0.23.14"
+cv = {git = "https://github.com/rust-cv/cv"}
