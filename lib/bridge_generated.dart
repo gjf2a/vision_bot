@@ -55,12 +55,12 @@ class NativeImpl implements Native {
         argNames: [],
       );
 
-  Future<Uint8List> intensityRgba(
+  Future<ImageResponse> intensityRgba(
       {required Uint8List intensities, dynamic hint}) {
     var arg0 = _platform.api2wire_uint_8_list(intensities);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_intensity_rgba(port_, arg0),
-      parseSuccessData: _wire2api_ZeroCopyBuffer_Uint8List,
+      parseSuccessData: _wire2api_image_response,
       constMeta: kIntensityRgbaConstMeta,
       argValues: [intensities],
       hint: hint,
@@ -73,11 +73,11 @@ class NativeImpl implements Native {
         argNames: ["intensities"],
       );
 
-  Future<Uint8List> yuvRgba({required ImageData img, dynamic hint}) {
+  Future<ImageResponse> yuvRgba({required ImageData img, dynamic hint}) {
     var arg0 = _platform.api2wire_box_autoadd_image_data(img);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_yuv_rgba(port_, arg0),
-      parseSuccessData: _wire2api_ZeroCopyBuffer_Uint8List,
+      parseSuccessData: _wire2api_image_response,
       constMeta: kYuvRgbaConstMeta,
       argValues: [img],
       hint: hint,
@@ -107,11 +107,11 @@ class NativeImpl implements Native {
         argNames: ["img"],
       );
 
-  Future<Uint8List> colorClusterer({required ImageData img, dynamic hint}) {
+  Future<ImageResponse> colorClusterer({required ImageData img, dynamic hint}) {
     var arg0 = _platform.api2wire_box_autoadd_image_data(img);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_color_clusterer(port_, arg0),
-      parseSuccessData: _wire2api_ZeroCopyBuffer_Uint8List,
+      parseSuccessData: _wire2api_image_response,
       constMeta: kColorClustererConstMeta,
       argValues: [img],
       hint: hint,
@@ -124,11 +124,11 @@ class NativeImpl implements Native {
         argNames: ["img"],
       );
 
-  Future<Uint8List> akazeView({required ImageData img, dynamic hint}) {
+  Future<ImageResponse> akazeView({required ImageData img, dynamic hint}) {
     var arg0 = _platform.api2wire_box_autoadd_image_data(img);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_akaze_view(port_, arg0),
-      parseSuccessData: _wire2api_ZeroCopyBuffer_Uint8List,
+      parseSuccessData: _wire2api_image_response,
       constMeta: kAkazeViewConstMeta,
       argValues: [img],
       hint: hint,
@@ -212,6 +212,16 @@ class NativeImpl implements Native {
 
   int _wire2api_i64(dynamic raw) {
     return castInt(raw);
+  }
+
+  ImageResponse _wire2api_image_response(dynamic raw) {
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return ImageResponse(
+      img: _wire2api_ZeroCopyBuffer_Uint8List(arr[0]),
+      msg: _wire2api_String(arr[1]),
+    );
   }
 
   SensorData _wire2api_sensor_data(dynamic raw) {

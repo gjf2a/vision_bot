@@ -9,7 +9,7 @@ import 'ffi.dart';
 import 'main.dart';
 
 class SimpleImageRunner extends VisionRunner {
-  final CameraImagePainter _livePicture = CameraImagePainter(makeColorFrom);
+  final CameraImagePainter _livePicture = CameraImagePainter(api.yuvRgba);
 
   @override
   CameraImagePainter livePicture() {
@@ -34,6 +34,7 @@ class SimpleImageRunner extends VisionRunner {
                           Text(selector.ipAddr),
                           Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
                           Text(selector.incoming),
+                          Text(_livePicture.lastMessage),
                           //selector.returnToStartButton(),
                         ],
                       ),
@@ -46,7 +47,7 @@ class SimpleImageRunner extends VisionRunner {
 }
 
 class AkazeImageRunner extends VisionRunner {
-  final CameraImagePainter _livePicture = CameraImagePainter(makeAkazeFrom);
+  final CameraImagePainter _livePicture = CameraImagePainter(api.akazeView);
 
   @override
   Widget display(SelectorPageState selector) {
@@ -66,6 +67,7 @@ class AkazeImageRunner extends VisionRunner {
                           Text(selector.ipAddr),
                           Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
                           Text(selector.incoming),
+                          Text(_livePicture.lastMessage),
                           //selector.returnToStartButton(),
                         ],
                       ),
@@ -84,13 +86,14 @@ class AkazeImageRunner extends VisionRunner {
 
 class CameraImagePainter extends CustomPainter {
   late dartui.Image _lastImage;
+  String lastMessage = "No messages yet";
   bool _initialized = false;
   int _width = 0, _height = 0;
   DateTime _start = DateTime.now();
   double _fps = 0.0;
   int _frameCount = 0;
   bool _ready = true;
-  Future<dartui.Image> Function(CameraImage) imageMaker;
+  Future<ImageResponse> Function({required ImageData img, dynamic hint}) imageMaker;
 
   CameraImagePainter(this.imageMaker);
 
@@ -100,7 +103,9 @@ class CameraImagePainter extends CustomPainter {
       _start = DateTime.now();
       _initialized = true;
     }
-    _lastImage = await imageMaker(img);
+    ImageResponse response = await imageMaker(img: from(img));
+    _lastImage = await makeImageFrom(response.img, img.width, img.height);
+    lastMessage = response.msg;
     _width = _lastImage.width;
     _height = _lastImage.height;
     _frameCount += 1;
@@ -133,16 +138,6 @@ class CameraImagePainter extends CustomPainter {
 
 ImageData from(CameraImage img) {
   return ImageData(ys: img.planes[0].bytes, us: img.planes[1].bytes, vs: img.planes[2].bytes, width: img.width, height: img.height, uvRowStride: img.planes[1].bytesPerRow, uvPixelStride: img.planes[1].bytesPerPixel!);
-}
-
-Future<dartui.Image> makeColorFrom(CameraImage img) async {
-  Uint8List proc = await api.yuvRgba(img: from(img));
-  return makeImageFrom(proc, img.width, img.height);
-}
-
-Future<dartui.Image> makeAkazeFrom(CameraImage img) async {
-  Uint8List proc = await api.akazeView(img: from(img));
-  return makeImageFrom(proc, img.width, img.height);
 }
 
 // This is super-clunky. I wonder if there's a better way...

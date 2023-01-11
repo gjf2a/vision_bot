@@ -185,6 +185,13 @@ impl Wire2Api<u8> for u8 {
 
 // Section: impl IntoDart
 
+impl support::IntoDart for ImageResponse {
+    fn into_dart(self) -> support::DartAbi {
+        vec![self.img.into_dart(), self.msg.into_dart()].into_dart()
+    }
+}
+impl support::IntoDartExceptPrimitive for ImageResponse {}
+
 impl support::IntoDart for SensorData {
     fn into_dart(self) -> support::DartAbi {
         vec![

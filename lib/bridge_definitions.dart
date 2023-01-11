@@ -15,12 +15,12 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kTrainingTimeConstMeta;
 
-  Future<Uint8List> intensityRgba(
+  Future<ImageResponse> intensityRgba(
       {required Uint8List intensities, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kIntensityRgbaConstMeta;
 
-  Future<Uint8List> yuvRgba({required ImageData img, dynamic hint});
+  Future<ImageResponse> yuvRgba({required ImageData img, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kYuvRgbaConstMeta;
 
@@ -28,11 +28,11 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kColorCountConstMeta;
 
-  Future<Uint8List> colorClusterer({required ImageData img, dynamic hint});
+  Future<ImageResponse> colorClusterer({required ImageData img, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kColorClustererConstMeta;
 
-  Future<Uint8List> akazeView({required ImageData img, dynamic hint});
+  Future<ImageResponse> akazeView({required ImageData img, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kAkazeViewConstMeta;
 
@@ -68,6 +68,16 @@ class ImageData {
     required this.height,
     required this.uvRowStride,
     required this.uvPixelStride,
+  });
+}
+
+class ImageResponse {
+  final Uint8List img;
+  final String msg;
+
+  ImageResponse({
+    required this.img,
+    required this.msg,
   });
 }
 
