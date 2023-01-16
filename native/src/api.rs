@@ -1,9 +1,10 @@
 use cv::bitarray::BitArray;
 use cv::feature::akaze::KeyPoint;
+use cv::image::imageproc::drawing::BresenhamLinePixelIterMut;
 use cv::{feature::akaze::Akaze, image::image::DynamicImage};
 use flutter_rust_bridge::support::lazy_static;
 use flutter_rust_bridge::ZeroCopyBuffer;
-use image::Rgba;
+use image::{ImageBuffer, Rgba};
 use kmeans::Kmeans;
 pub use particle_filter::sonar3bot::{MotorData, RobotSensorPosition, BOT};
 use std::collections::{HashMap, HashSet};
@@ -13,7 +14,7 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
-use crate::image_proc::{convert, inner_yuv_rgba, simple_yuv_rgb, U8ColorTriple};
+use crate::image_proc::{convert, correspondences, inner_yuv_rgba, simple_yuv_rgb, U8ColorTriple};
 
 lazy_static! {
     static ref POS: Mutex<RobotSensorPosition> = Mutex::new(RobotSensorPosition::new(BOT));
@@ -24,7 +25,8 @@ lazy_static! {
     static ref TOTAL_KEYPOINTS: AtomicU64 = AtomicU64::new(0);
     static ref LAST_POINTS: Arc<Mutex<Vec<KeyPoint>>> = Arc::new(Mutex::new(vec![]));
     static ref LAST_FEATURES: Arc<Mutex<Vec<BitArray<64>>>> = Arc::new(Mutex::new(vec![]));
-    static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> = Arc::new(Mutex::new(HashSet::new()));
+    static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> =
+        Arc::new(Mutex::new(HashSet::new()));
 }
 
 pub fn kmeans_ready() -> bool {
@@ -144,17 +146,7 @@ pub fn akaze_view(img: ImageData) -> ImageResponse {
     if let DynamicImage::ImageRgba8(mut unwrapped) = wrapped {
         let num_points = keypoints.len();
         TOTAL_KEYPOINTS.fetch_add(num_points as u64, Ordering::SeqCst);
-        for kp in keypoints.iter().copied() {
-            let (x, y) = kp.point;
-            unwrapped.put_pixel(x as u32, y as u32, Rgba([255, 0, 0, 255]));
-        }
-        /*let num_repeated_features = {
-            let last_features = LAST_FEATURES.lock().unwrap();
-            features
-                .iter()
-                .filter(|f| last_features.contains(*f))
-                .count()
-        };*/
+        plot_keypoints_on(&keypoints, &mut unwrapped, [255, 0, 0, 255]);
         let total_features_seen = {
             let mut all_features = ALL_FEATURES.lock().unwrap();
             let last_features = LAST_FEATURES.lock().unwrap();
@@ -174,10 +166,60 @@ pub fn akaze_view(img: ImageData) -> ImageResponse {
         let total = TOTAL_KEYPOINTS.load(Ordering::SeqCst);
         ImageResponse {
             img: ZeroCopyBuffer(unwrapped.into_vec()),
-            msg: format!("points: {num_points} total features: {total_features_seen} ({} total, {} repeats)", total, total - total_features_seen as u64),
+            msg: format!(
+                "points: {num_points} total features: {total_features_seen} ({} total, {} repeats)",
+                total,
+                total - total_features_seen as u64
+            ),
         }
     } else {
         panic!("This shouldn't happen");
+    }
+}
+
+pub fn akaze_flow(img: ImageData) -> ImageResponse {
+    let rgba = convert(&img);
+    let wrapped = DynamicImage::ImageRgba8(rgba);
+    let akaze = Akaze::dense();
+    let (keypoints, features) = akaze.extract(&wrapped);
+    if let DynamicImage::ImageRgba8(mut unwrapped) = wrapped {
+        {
+            let last_keypoints = LAST_POINTS.lock().unwrap();
+            plot_keypoints_on(&last_keypoints, &mut unwrapped, [0, 255, 0, 255]);
+            plot_keypoints_on(&keypoints, &mut unwrapped, [255, 0, 0, 255]);
+            let last_features = LAST_FEATURES.lock().unwrap();
+            let matches = correspondences(&last_features, &features);
+            for (last_i, i) in matches.iter().copied() {
+                let (x1, y1) = last_keypoints[last_i].point;
+                let (x2, y2) = keypoints[i].point;
+                for p in BresenhamLinePixelIterMut::new(&mut unwrapped, (x1, y1), (x2, y2)) {
+                    *p = Rgba([0, 255, 0, 255]);
+                }
+            }
+        }
+        {
+            *LAST_POINTS.lock().unwrap() = keypoints;
+        }
+        {
+            *LAST_FEATURES.lock().unwrap() = features;
+        }
+        ImageResponse {
+            img: ZeroCopyBuffer(unwrapped.into_vec()),
+            msg: format!(""),
+        }
+    } else {
+        panic!("This shouldn't happen");
+    }
+}
+
+fn plot_keypoints_on(
+    keypoints: &Vec<KeyPoint>,
+    img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>,
+    color: [u8; 4],
+) {
+    for kp in keypoints.iter().copied() {
+        let (x, y) = kp.point;
+        img.put_pixel(x as u32, y as u32, Rgba(color));
     }
 }
 

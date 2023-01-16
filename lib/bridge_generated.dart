@@ -141,6 +141,23 @@ class NativeImpl implements Native {
         argNames: ["img"],
       );
 
+  Future<ImageResponse> akazeFlow({required ImageData img, dynamic hint}) {
+    var arg0 = _platform.api2wire_box_autoadd_image_data(img);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_akaze_flow(port_, arg0),
+      parseSuccessData: _wire2api_image_response,
+      constMeta: kAkazeFlowConstMeta,
+      argValues: [img],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kAkazeFlowConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "akaze_flow",
+        argNames: ["img"],
+      );
+
   Future<void> resetPositionEstimate({dynamic hint}) {
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_reset_position_estimate(port_),
@@ -515,6 +532,23 @@ class NativeWire implements FlutterRustBridgeWireBase {
           ffi.Void Function(
               ffi.Int64, ffi.Pointer<wire_ImageData>)>>('wire_akaze_view');
   late final _wire_akaze_view = _wire_akaze_viewPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_ImageData>)>();
+
+  void wire_akaze_flow(
+    int port_,
+    ffi.Pointer<wire_ImageData> img,
+  ) {
+    return _wire_akaze_flow(
+      port_,
+      img,
+    );
+  }
+
+  late final _wire_akaze_flowPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64, ffi.Pointer<wire_ImageData>)>>('wire_akaze_flow');
+  late final _wire_akaze_flow = _wire_akaze_flowPtr
       .asFunction<void Function(int, ffi.Pointer<wire_ImageData>)>();
 
   void wire_reset_position_estimate(

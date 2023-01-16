@@ -36,6 +36,10 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kAkazeViewConstMeta;
 
+  Future<ImageResponse> akazeFlow({required ImageData img, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kAkazeFlowConstMeta;
+
   Future<void> resetPositionEstimate({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kResetPositionEstimateConstMeta;

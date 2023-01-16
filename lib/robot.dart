@@ -84,6 +84,46 @@ class AkazeImageRunner extends VisionRunner {
   }
 }
 
+
+
+class AkazeImageFlowRunner extends VisionRunner {
+  final CameraImagePainter _livePicture = CameraImagePainter(api.akazeFlow);
+
+  @override
+  Widget display(SelectorPageState selector) {
+    return MaterialApp(
+        home: Scaffold(
+            appBar: AppBar(
+                title: const Text("This is a title")),
+            body: Center(
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      CustomPaint(painter: _livePicture),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          selector.startStopButton(),
+                          Text(selector.ipAddr),
+                          Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
+                          Text(selector.incoming),
+                          Text(_livePicture.lastMessage),
+                          //selector.returnToStartButton(),
+                        ],
+                      ),
+                    ]
+                )
+            )
+        )
+    );
+  }
+
+  @override
+  CameraImagePainter livePicture() {
+    return _livePicture;
+  }
+}
+
 class CameraImagePainter extends CustomPainter {
   late dartui.Image _lastImage;
   String lastMessage = "No messages yet";

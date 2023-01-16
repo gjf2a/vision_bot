@@ -173,6 +173,8 @@ class SelectorPageState extends State<SelectorPage> {
                             "Image", Colors.blue, () => SimpleImageRunner()),
                         selectorButton(
                             "Akaze", Colors.cyan, () => AkazeImageRunner()),
+                        selectorButton(
+                            "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
                       ]
                   )
               )

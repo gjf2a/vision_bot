@@ -37,6 +37,11 @@ pub extern "C" fn wire_akaze_view(port_: i64, img: *mut wire_ImageData) {
 }
 
 #[no_mangle]
+pub extern "C" fn wire_akaze_flow(port_: i64, img: *mut wire_ImageData) {
+    wire_akaze_flow_impl(port_, img)
+}
+
+#[no_mangle]
 pub extern "C" fn wire_reset_position_estimate(port_: i64) {
     wire_reset_position_estimate_impl(port_)
 }

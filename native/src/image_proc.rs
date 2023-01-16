@@ -1,4 +1,5 @@
 use crate::api::ImageData;
+use cv::bitarray::BitArray;
 use image::{Rgba, RgbaImage};
 use std::cmp::{max, min};
 
@@ -55,4 +56,11 @@ fn yuv2rgb(yp: i64, up: i64, vp: i64) -> (u8, u8, u8) {
 
 fn clamp_u8(value: i64) -> u8 {
     min(max(value, 0), u8::MAX as i64) as u8
+}
+
+pub fn correspondences(
+    last_features: &Vec<BitArray<64>>,
+    features: &Vec<BitArray<64>>,
+) -> Vec<(usize, usize)> {
+    stable_matching::stable_matching_distance(last_features, features, BitArray::distance)
 }

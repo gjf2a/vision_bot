@@ -106,6 +106,19 @@ fn wire_akaze_view_impl(port_: MessagePort, img: impl Wire2Api<ImageData> + Unwi
         },
     )
 }
+fn wire_akaze_flow_impl(port_: MessagePort, img: impl Wire2Api<ImageData> + UnwindSafe) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap(
+        WrapInfo {
+            debug_name: "akaze_flow",
+            port: Some(port_),
+            mode: FfiCallMode::Normal,
+        },
+        move || {
+            let api_img = img.wire2api();
+            move |task_callback| Ok(akaze_flow(api_img))
+        },
+    )
+}
 fn wire_reset_position_estimate_impl(port_: MessagePort) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
