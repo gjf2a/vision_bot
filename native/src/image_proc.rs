@@ -1,6 +1,10 @@
 use crate::api::ImageData;
-use cv::bitarray::BitArray;
-use image::{Rgba, RgbaImage};
+use cv::{
+    bitarray::BitArray, feature::akaze::KeyPoint,
+    image::imageproc::drawing::BresenhamLinePixelIterMut,
+};
+use image::{ImageBuffer, Rgba, RgbaImage};
+use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 
 pub type U8ColorTriple = (u8, u8, u8);
@@ -63,4 +67,131 @@ pub fn correspondences(
     features: &Vec<BitArray<64>>,
 ) -> Vec<(usize, usize)> {
     stable_matching::stable_matching_distance(last_features, features, BitArray::distance)
+}
+
+#[derive(Copy, Clone)]
+pub struct KeyPointInfo {
+    point: KeyPoint,
+    feature: BitArray<64>,
+}
+
+/*pub fn distance(kp1: &KeyPointInfo, kp2: &KeyPointInfo) -> f32 {
+    ((kp1.point.point.0 - kp2.point.point.0).powf(2.0)
+        + (kp1.point.point.1 - kp2.point.point.1).powf(2.0))
+    .sqrt()
+}*/
+
+pub fn distance(kp1: &KeyPoint, kp2: &KeyPoint) -> OrderedFloat<f32> {
+    OrderedFloat(
+        ((kp1.point.0 - kp2.point.0).powf(2.0) + (kp1.point.1 - kp2.point.1).powf(2.0)).sqrt(),
+    )
+}
+
+pub fn heading(kp1: &KeyPointInfo, kp2: &KeyPointInfo) -> f32 {
+    (kp2.point.point.1 - kp1.point.point.1).atan2(kp2.point.point.0 - kp1.point.point.0)
+}
+
+impl KeyPointInfo {
+    pub fn point_mean<I: Iterator<Item = Self>>(iter: I) -> (f32, f32) {
+        let mut x_sum = 0.0;
+        let mut y_sum = 0.0;
+        let mut len = 0.0;
+        for kpi in iter {
+            let (x, y) = kpi.point.point;
+            x_sum += x;
+            y_sum += y;
+            len += 1.0;
+        }
+        (x_sum / len, y_sum / len)
+    }
+}
+
+pub struct KeyPointMovements {
+    moves: Vec<(KeyPointInfo, KeyPointInfo)>,
+}
+
+impl KeyPointMovements {
+    pub fn feature_match(
+        last_keypoints: &Vec<KeyPoint>,
+        last_features: &Vec<BitArray<64>>,
+        keypoints: &Vec<KeyPoint>,
+        features: &Vec<BitArray<64>>,
+    ) -> Self {
+        let matches = correspondences(last_features, features);
+        Self::from_matches(&matches, last_keypoints, last_features, keypoints, features)
+    }
+
+    pub fn keypoint_match(
+        last_keypoints: &Vec<KeyPoint>,
+        last_features: &Vec<BitArray<64>>,
+        keypoints: &Vec<KeyPoint>,
+        features: &Vec<BitArray<64>>,
+    ) -> Self {
+        let matches =
+            stable_matching::stable_matching_distance(last_keypoints, keypoints, distance);
+        Self::from_matches(&matches, last_keypoints, last_features, keypoints, features)
+    }
+
+    fn from_matches(
+        matches: &Vec<(usize, usize)>,
+        last_keypoints: &Vec<KeyPoint>,
+        last_features: &Vec<BitArray<64>>,
+        keypoints: &Vec<KeyPoint>,
+        features: &Vec<BitArray<64>>,
+    ) -> Self {
+        Self {
+            moves: matches
+                .iter()
+                .map(|(l_i, i)| {
+                    (
+                        KeyPointInfo {
+                            point: last_keypoints[*l_i],
+                            feature: last_features[*l_i],
+                        },
+                        KeyPointInfo {
+                            point: keypoints[*i],
+                            feature: features[*i],
+                        },
+                    )
+                })
+                .collect(),
+        }
+    }
+
+    pub fn render_on(&self, img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, color: [u8; 4]) {
+        for (last_kp, kp) in self.moves.iter().copied() {
+            let (x1, y1) = last_kp.point.point;
+            let (x2, y2) = kp.point.point;
+            for p in BresenhamLinePixelIterMut::new(img, (x1, y1), (x2, y2)) {
+                *p = Rgba(color);
+            }
+        }
+    }
+
+    pub fn render_mean_on(&self, img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, color: [u8; 4]) {
+        let (start, end) = self.mean();
+        for p in BresenhamLinePixelIterMut::new(img, start, end) {
+            *p = Rgba(color);
+        }
+    }
+
+    /*
+    pub fn median_magnitude(&self) -> f32 {
+        let mut magnitudes = self.moves.iter().map(|(k1, k2)| OrderedFloat(distance(k1, k2))).collect::<Vec<_>>();
+        magnitudes.sort_unstable();
+        magnitudes[magnitudes.len() / 2].into()
+    }
+
+    pub fn median_orientation(&self) -> f32 {
+        let mut orientations = self.moves.iter().map(|(k1, k2)| OrderedFloat(heading(k1, k2))).collect::<Vec<_>>();
+        orientations.sort_unstable();
+
+    }
+    */
+
+    pub fn mean(&self) -> ((f32, f32), (f32, f32)) {
+        let start_mean = KeyPointInfo::point_mean(self.moves.iter().map(|(kpi, _)| *kpi));
+        let end_mean = KeyPointInfo::point_mean(self.moves.iter().map(|(_, kpi)| *kpi));
+        (start_mean, end_mean)
+    }
 }

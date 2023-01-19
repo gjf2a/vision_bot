@@ -1,6 +1,5 @@
 use cv::bitarray::BitArray;
 use cv::feature::akaze::KeyPoint;
-use cv::image::imageproc::drawing::BresenhamLinePixelIterMut;
 use cv::{feature::akaze::Akaze, image::image::DynamicImage};
 use flutter_rust_bridge::support::lazy_static;
 use flutter_rust_bridge::ZeroCopyBuffer;
@@ -14,7 +13,9 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
-use crate::image_proc::{convert, correspondences, inner_yuv_rgba, simple_yuv_rgb, U8ColorTriple};
+use crate::image_proc::{
+    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple,
+};
 
 lazy_static! {
     static ref POS: Mutex<RobotSensorPosition> = Mutex::new(RobotSensorPosition::new(BOT));
@@ -185,17 +186,27 @@ pub fn akaze_flow(img: ImageData) -> ImageResponse {
     if let DynamicImage::ImageRgba8(mut unwrapped) = wrapped {
         {
             let last_keypoints = LAST_POINTS.lock().unwrap();
-            plot_keypoints_on(&last_keypoints, &mut unwrapped, [0, 255, 0, 255]);
-            plot_keypoints_on(&keypoints, &mut unwrapped, [255, 0, 0, 255]);
             let last_features = LAST_FEATURES.lock().unwrap();
-            let matches = correspondences(&last_features, &features);
-            for (last_i, i) in matches.iter().copied() {
-                let (x1, y1) = last_keypoints[last_i].point;
-                let (x2, y2) = keypoints[i].point;
-                for p in BresenhamLinePixelIterMut::new(&mut unwrapped, (x1, y1), (x2, y2)) {
-                    *p = Rgba([0, 255, 0, 255]);
-                }
-            }
+            let movements = KeyPointMovements::feature_match(
+                &last_keypoints,
+                &last_features,
+                &keypoints,
+                &features,
+            );
+            movements.render_on(&mut unwrapped, [0, 255, 0, 255]);
+            movements.render_mean_on(&mut unwrapped, [255, 0, 0, 255]);
+        }
+        {
+            let last_keypoints = LAST_POINTS.lock().unwrap();
+            let last_features = LAST_FEATURES.lock().unwrap();
+            let movements = KeyPointMovements::keypoint_match(
+                &last_keypoints,
+                &last_features,
+                &keypoints,
+                &features,
+            );
+            movements.render_on(&mut unwrapped, [0, 0, 255, 255]);
+            movements.render_mean_on(&mut unwrapped, [255, 255, 0, 255]);
         }
         {
             *LAST_POINTS.lock().unwrap() = keypoints;
