@@ -7,6 +7,7 @@ use image::{ImageBuffer, Rgba};
 use kmeans::Kmeans;
 pub use particle_filter::sonar3bot::{MotorData, RobotSensorPosition, BOT};
 use std::collections::{HashMap, HashSet};
+use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{
     collections::BTreeSet,
@@ -14,7 +15,7 @@ use std::{
 };
 
 use crate::image_proc::{
-    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple,
+    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple, self,
 };
 
 lazy_static! {
@@ -28,6 +29,7 @@ lazy_static! {
     static ref LAST_FEATURES: Arc<Mutex<Vec<BitArray<64>>>> = Arc::new(Mutex::new(vec![]));
     static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> =
         Arc::new(Mutex::new(HashSet::new()));
+    static ref LAST_IMAGE: Mutex<Option<ImageData>> = Mutex::new(None);
 }
 
 pub fn kmeans_ready() -> bool {
@@ -38,6 +40,7 @@ pub fn training_time() -> i64 {
     TRAINING_TIME.load(Ordering::SeqCst) as i64
 }
 
+#[derive(Clone)]
 pub struct ImageData {
     pub ys: Vec<u8>,
     pub us: Vec<u8>,
@@ -193,7 +196,7 @@ pub fn akaze_flow(img: ImageData) -> ImageResponse {
                 &keypoints,
                 &features,
             );
-            movements.render_on(&mut unwrapped, [0, 255, 0, 255]);
+            //movements.render_on(&mut unwrapped, [0, 255, 0, 255]);
             movements.render_mean_on(&mut unwrapped, [255, 0, 0, 255]);
         }
         {
@@ -205,8 +208,8 @@ pub fn akaze_flow(img: ImageData) -> ImageResponse {
                 &keypoints,
                 &features,
             );
-            movements.render_on(&mut unwrapped, [0, 0, 255, 255]);
-            movements.render_mean_on(&mut unwrapped, [255, 255, 0, 255]);
+            //movements.render_on(&mut unwrapped, [0, 0, 255, 255]);
+            movements.render_mean_on(&mut unwrapped, [0, 255, 0, 255]);
         }
         {
             *LAST_POINTS.lock().unwrap() = keypoints;
@@ -271,4 +274,105 @@ pub fn parse_sensor_data(incoming_data: String) -> SensorData {
         left_speed: *parts.get("LS").unwrap(),
         right_speed: *parts.get("RS").unwrap(),
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FileSystemOutcome {
+    Success, Failure, NotAttempted
+}
+
+impl FileSystemOutcome {
+    fn from<V, E>(outcome: Result<V, E>) -> Self {
+        match outcome {
+            Ok(_) => Self::Success,
+            Err(_) => Self::Failure,
+        }
+    }
+}
+
+pub fn list_projects() -> Vec<String> {
+    list(".".to_owned())
+}
+
+pub fn list_labels(project: String) -> Vec<String> {
+    list(project)
+}
+
+fn list(path: String) -> Vec<String> {
+    match std::fs::read_dir(path) {
+        Err(e) => {
+            vec![format!("{e}")]
+        }
+        Ok(dir) => {
+            let mut list = vec![];
+            for entry in dir {
+                if let Ok(entry) = entry {
+                    list.push(entry.file_name().to_str().unwrap().to_owned());
+                }
+            }
+            list
+        }
+    }
+}
+
+fn invent_name_for(prefix: &str, names: &Vec<String>) -> String {
+    format!("{prefix}{}", names.len() + 1)
+}
+
+pub fn add_project() -> FileSystemOutcome {
+    let name = invent_name_for("Project", &list_projects());
+    let outcome = FileSystemOutcome::from(std::fs::create_dir(name.clone())); 
+    if outcome == FileSystemOutcome::Success {
+        add_label(name)
+    } else {
+        outcome
+    }
+}
+
+pub fn rename_project(old_name: String, new_name: String) -> FileSystemOutcome {
+    FileSystemOutcome::from(std::fs::rename(old_name, new_name))
+}
+
+pub fn add_label(project: String) -> FileSystemOutcome {
+    let label = invent_name_for("Label", &list_labels(project.clone()));
+    FileSystemOutcome::from(std::fs::create_dir(label_path(project, label)))     
+}
+
+pub fn store_image(project: String, label: String) -> FileSystemOutcome {
+    let last_image = {
+        LAST_IMAGE.lock().unwrap().clone()
+    };
+
+    match last_image {
+        Some(last_image) => {
+            let encoded = image_proc::convert(&last_image);
+            let mut path = label_path(project, label);
+            path.push(invent_filename("Image", &path));
+            FileSystemOutcome::from(encoded.save(path))
+        }
+        None => FileSystemOutcome::NotAttempted
+    }
+}
+
+fn invent_filename(prefix: &str, path: &PathBuf) -> String {
+    let file_count = match std::fs::read_dir(path) {
+        Ok(files) => files.count(),
+        Err(_) => 0
+    };
+    format!("{prefix}_{file_count}")
+}
+
+pub fn photographer_background(img: ImageData) -> ImageResponse {
+    {
+        let mut last_image = LAST_IMAGE.lock().unwrap();
+        *last_image = Some(img.clone());
+    }
+    yuv_rgba(img)
+}
+
+fn label_path(project: String, label: String) -> PathBuf {
+    let mut path = PathBuf::new();
+    path.push(project);
+    path.push(label);
+    path
 }

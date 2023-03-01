@@ -124,6 +124,64 @@ class AkazeImageFlowRunner extends VisionRunner {
   }
 }
 
+class PhotoImageRunner extends VisionRunner  {
+  final CameraImagePainter _livePicture = CameraImagePainter(api.yuvRgba);
+
+  @override
+  Widget display(SelectorPageState selector) {
+    return MaterialApp(
+        home: Scaffold(
+            appBar: AppBar(
+                title: const Text("Take a picture")),
+            body: Center(
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      CustomPaint(painter: _livePicture),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Text(selector.ipAddr),
+                          //Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
+                          //Text(selector.incoming),
+                          Text(_livePicture.lastMessage),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          Text("One"),
+                          selector.testDropdown(),
+                          //selector.addProject(),
+                          //selector.projectChoices(),
+                          //selector.addLabel(),
+                          //selector.labelChoices(),
+                          //selector.takePhoto(),
+                        ],
+                      ),
+                    ]
+                )
+            )
+        )
+    );
+  }
+
+  @override
+  CameraImagePainter livePicture() {
+    return _livePicture;
+  }
+}
+
 class CameraImagePainter extends CustomPainter {
   late dartui.Image _lastImage;
   String lastMessage = "No messages yet";

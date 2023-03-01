@@ -56,6 +56,49 @@ pub extern "C" fn wire_parse_sensor_data(port_: i64, incoming_data: *mut wire_ui
     wire_parse_sensor_data_impl(port_, incoming_data)
 }
 
+#[no_mangle]
+pub extern "C" fn wire_list_projects(port_: i64) {
+    wire_list_projects_impl(port_)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_list_labels(port_: i64, project: *mut wire_uint_8_list) {
+    wire_list_labels_impl(port_, project)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_add_project(port_: i64) {
+    wire_add_project_impl(port_)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_rename_project(
+    port_: i64,
+    old_name: *mut wire_uint_8_list,
+    new_name: *mut wire_uint_8_list,
+) {
+    wire_rename_project_impl(port_, old_name, new_name)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_add_label(port_: i64, project: *mut wire_uint_8_list) {
+    wire_add_label_impl(port_, project)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_store_image(
+    port_: i64,
+    project: *mut wire_uint_8_list,
+    label: *mut wire_uint_8_list,
+) {
+    wire_store_image_impl(port_, project, label)
+}
+
+#[no_mangle]
+pub extern "C" fn wire_photographer_background(port_: i64, img: *mut wire_ImageData) {
+    wire_photographer_background_impl(port_, img)
+}
+
 // Section: allocate functions
 
 #[no_mangle]

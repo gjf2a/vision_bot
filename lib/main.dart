@@ -66,8 +66,14 @@ class SelectorPageState extends State<SelectorPage> {
 
   String ipAddr = "Awaiting IP Address...";
   String incoming = "Setting up server...";
+  String otherMsg = "";
   RobotStatus _robotStatus = RobotStatus.notStarted;
   RobotState _robotState = RobotState(left: WheelAction.stop, right: WheelAction.stop);
+
+  List<String> _projects = ["None"];
+  List<String> _labels = ["None"];
+  String _currentProject = "None";
+  String _currentLabel = "None";
 
   Widget startStopButton() {
     if (_robotStatus == RobotStatus.notStarted) {
@@ -99,6 +105,7 @@ class SelectorPageState extends State<SelectorPage> {
   void initState() {
     super.initState();
     controller = CameraController(_cameras[0], ResolutionPreset.low);
+    _setupProjects();
     _setupServer();
     _findIPAddress();
   }
@@ -125,6 +132,73 @@ class SelectorPageState extends State<SelectorPage> {
       ));
     }
   }
+
+  Future<void> _setupProjects() async {
+    _projects = await api.listProjects();
+    _currentProject = _projects[0];
+    updateLabels(_currentProject);
+  }
+
+  void updateProjects() {
+    api.listProjects().then((updatedProjects) {
+      setState(() {
+        _projects = updatedProjects;
+        updateLabels(_currentProject);
+      });
+    });
+  }
+
+  void updateLabels(String project) {
+    api.listLabels(project: project).then((updatedLabels) {
+      setState(() {
+        _currentProject = project;
+        _labels = updatedLabels;
+        _currentLabel = updatedLabels[0];
+      });
+    });
+  }
+
+  Widget projectChoices() {
+    return makeDropdown(_projects, updateLabels);
+  }
+
+  Widget labelChoices() {
+    return makeDropdown(_labels, (label) {_currentLabel = label;});
+  }
+
+  Widget takePhoto() {
+    return makeCmdButton("Take Photo", Colors.orange, () {
+      api.storeImage(project: _currentProject, label: _currentLabel).then((value) {
+        // From https://stackoverflow.com/questions/13110542/how-to-get-a-timestamp-in-dart
+        DateTime _now = DateTime.now();
+        otherMsg = 'timestamp: ${_now.hour}:${_now.minute}:${_now.second}.${_now.millisecond}';
+      });
+    });
+  }
+
+  Widget addProject() {
+    return makeCmdButton("Add Project", Colors.blue, () {
+      api.addProject().then((value) {
+        updateProjects();
+      });
+    });
+  }
+
+  /*Widget renameProject() {
+
+  }*/
+
+  Widget addLabel() {
+    return makeCmdButton("Add Label", Colors.green, () {
+      api.addLabel(project: _currentProject).then((value) {
+        updateLabels(_currentProject);
+      });
+    });
+  }
+
+  /*Widget renameLabel() {
+
+  }*/
 
   void _listenToSocket(Socket socket) {
     socket.listen((data) {
@@ -175,6 +249,8 @@ class SelectorPageState extends State<SelectorPage> {
                             "Akaze", Colors.cyan, () => AkazeImageRunner()),
                         selectorButton(
                             "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
+                        selectorButton(
+                          "Photographer", Colors.yellow, () => PhotoImageRunner()),
                       ]
                   )
               )
@@ -229,6 +305,33 @@ class SelectorPageState extends State<SelectorPage> {
         running = null;
       }
     });
+  }
+
+  Widget makeDropdown(List<String> options, void Function(String) cmd) {
+    String dropdownValue = options[0];
+    return SizedBox(
+        width: 100,
+        height: 100,
+        child: DropdownButton<String>(
+          value: dropdownValue,
+            items: options.map<DropdownMenuItem<String>>((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (String? value) {
+              setState(() {
+                dropdownValue = value!;
+              });
+              cmd(value!);
+            }
+        )
+    );
+  }
+
+  Widget testDropdown() {
+    return makeDropdown(["Alpha", "Beta", "Gamma"], (s) {});
   }
 }
 

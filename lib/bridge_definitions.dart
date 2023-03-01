@@ -53,6 +53,43 @@ abstract class Native {
       {required String incomingData, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kParseSensorDataConstMeta;
+
+  Future<List<String>> listProjects({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kListProjectsConstMeta;
+
+  Future<List<String>> listLabels({required String project, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kListLabelsConstMeta;
+
+  Future<FileSystemOutcome> addProject({dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kAddProjectConstMeta;
+
+  Future<FileSystemOutcome> renameProject(
+      {required String oldName, required String newName, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kRenameProjectConstMeta;
+
+  Future<FileSystemOutcome> addLabel({required String project, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kAddLabelConstMeta;
+
+  Future<FileSystemOutcome> storeImage(
+      {required String project, required String label, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kStoreImageConstMeta;
+
+  Future<ImageResponse> photographerBackground(
+      {required ImageData img, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kPhotographerBackgroundConstMeta;
+}
+
+enum FileSystemOutcome {
+  Success,
+  Failure,
+  NotAttempted,
 }
 
 class ImageData {
