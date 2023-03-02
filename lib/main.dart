@@ -77,7 +77,7 @@ class SelectorPageState extends State<SelectorPage> {
   List<String> _labels = ["None"];
   String _currentProject = "None";
   String _currentLabel = "None";
-  String _test = "None";
+  String _test = "Alpha";
 
   Widget startStopButton() {
     if (_robotStatus == RobotStatus.notStarted) {

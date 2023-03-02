@@ -14,6 +14,8 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
+const PROJECT_PATH: &str = "projects";
+
 use crate::image_proc::{
     convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple, self,
 };
@@ -291,28 +293,50 @@ impl FileSystemOutcome {
 }
 
 pub fn list_projects() -> Vec<String> {
-    list(".".to_owned())
+    match list(PROJECT_PATH.to_owned()) {
+        Ok(result) => result,
+        Err(_) => {
+            match std::fs::create_dir(PROJECT_PATH) {
+                Ok(_) => {
+                    match add_project() {
+                        FileSystemOutcome::Success => {
+                            match list(PROJECT_PATH.to_owned()) {
+                                Err(e) => vec![format!("Error: {e}")],
+                                Ok(v) => {
+                                    match add_label(v[0].clone()) {
+                                        FileSystemOutcome::Success => v,
+                                        FileSystemOutcome::Failure => vec!["No label!".to_owned()],
+                                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
+                                    }
+                                }
+                            }
+                        }
+                        FileSystemOutcome::Failure => vec!["No project!".to_owned()],
+                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
+                    }
+                }
+                Err(e) => vec![format!("Error: {e}")]
+            }
+        }
+    }
 }
 
 pub fn list_labels(project: String) -> Vec<String> {
-    list(project)
+    match list(format!("{PROJECT_PATH}/{project}")) {
+        Ok(result) => result,
+        Err(e) => vec![format!("Error: {e}")]
+    }
 }
 
-fn list(path: String) -> Vec<String> {
-    match std::fs::read_dir(path) {
-        Err(e) => {
-            vec![format!("{e}")]
-        }
-        Ok(dir) => {
-            let mut list = vec![];
-            for entry in dir {
-                if let Ok(entry) = entry {
-                    list.push(entry.file_name().to_str().unwrap().to_owned());
-                }
-            }
-            list
+fn list(path: String) -> anyhow::Result<Vec<String>> {
+    let dir = std::fs::read_dir(path)?;
+    let mut list = vec![];
+    for entry in dir {
+        if let Ok(entry) = entry {
+            list.push(entry.file_name().to_str().unwrap().to_owned());
         }
     }
+    Ok(list)
 }
 
 fn invent_name_for(prefix: &str, names: &Vec<String>) -> String {

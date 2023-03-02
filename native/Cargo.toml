@@ -21,3 +21,4 @@ float_extras = "0.1.6"
 image = "0.23.14"
 cv = {git = "https://github.com/rust-cv/cv"}
 stable_matching = "0.1.0"
+anyhow = "1"
