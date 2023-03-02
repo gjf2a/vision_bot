@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:vision_bot/robot.dart';
 
 import 'package:flutter/material.dart';
@@ -8,6 +9,8 @@ import 'package:camera/camera.dart';
 import 'package:network_info_plus/network_info_plus.dart';
 
 import 'ffi.dart';
+
+import 'package:collection/collection.dart';
 
 const int ourPort = 8888;
 
@@ -74,6 +77,7 @@ class SelectorPageState extends State<SelectorPage> {
   List<String> _labels = ["None"];
   String _currentProject = "None";
   String _currentLabel = "None";
+  String _test = "None";
 
   Widget startStopButton() {
     if (_robotStatus == RobotStatus.notStarted) {
@@ -159,11 +163,11 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Widget projectChoices() {
-    return makeDropdown(_projects, updateLabels);
+    return makeChoices(_currentProject, _projects, updateLabels);
   }
 
   Widget labelChoices() {
-    return makeDropdown(_labels, (label) {_currentLabel = label;});
+    return makeChoices(_currentLabel, _labels, (label) {_currentLabel = label;});
   }
 
   Widget takePhoto() {
@@ -307,31 +311,24 @@ class SelectorPageState extends State<SelectorPage> {
     });
   }
 
-  Widget makeDropdown(List<String> options, void Function(String) cmd) {
-    String dropdownValue = options[0];
-    return SizedBox(
-        width: 100,
-        height: 100,
-        child: DropdownButton<String>(
-          value: dropdownValue,
-            items: options.map<DropdownMenuItem<String>>((String value) {
-              return DropdownMenuItem<String>(
-                value: value,
-                child: Text(value),
-              );
-            }).toList(),
-            onChanged: (String? value) {
-              setState(() {
-                dropdownValue = value!;
-              });
-              cmd(value!);
-            }
-        )
+  Widget makeChoices(String current, List<String> options, void Function(String) cmd) {
+    return Row(
+      children: [
+        Column(children: options.mapIndexed((index, element) =>
+            TextButton(
+                onPressed: () {
+                  setState(() {cmd(options[index]);});
+                  },
+                child: Text(
+                    "$element",
+                  style: TextStyle(color: current == element ? Colors.red : Colors.blue),
+                ))).toList()),
+      ],
     );
   }
 
   Widget testDropdown() {
-    return makeDropdown(["Alpha", "Beta", "Gamma"], (s) {});
+    return makeChoices(_test, ["Alpha", "Beta", "Gamma"], (s) {_test = s;});
   }
 }
 
