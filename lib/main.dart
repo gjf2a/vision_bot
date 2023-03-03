@@ -2,6 +2,7 @@ import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:vision_bot/robot.dart';
 
 import 'package:flutter/material.dart';
@@ -73,6 +74,7 @@ class SelectorPageState extends State<SelectorPage> {
   RobotStatus _robotStatus = RobotStatus.notStarted;
   RobotState _robotState = RobotState(left: WheelAction.stop, right: WheelAction.stop);
 
+  String _applicationSupportDir = "";
   List<String> _projects = ["None"];
   List<String> _labels = ["None"];
   String _currentProject = "None";
@@ -138,13 +140,15 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Future<void> _setupProjects() async {
-    _projects = await api.listProjects();
+    Directory appDir = await getApplicationSupportDirectory();
+    _applicationSupportDir = appDir.path;
+    _projects = await api.listProjects(fileSystemPath: _applicationSupportDir);
     _currentProject = _projects[0];
     updateLabels(_currentProject);
   }
 
   void updateProjects() {
-    api.listProjects().then((updatedProjects) {
+    api.listProjects(fileSystemPath: _applicationSupportDir).then((updatedProjects) {
       setState(() {
         _projects = updatedProjects;
         updateLabels(_currentProject);
@@ -153,7 +157,7 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void updateLabels(String project) {
-    api.listLabels(project: project).then((updatedLabels) {
+    api.listLabels(fileSystemPath: _applicationSupportDir, project: project).then((updatedLabels) {
       setState(() {
         _currentProject = project;
         _labels = updatedLabels;
@@ -172,7 +176,7 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget takePhoto() {
     return makeCmdButton("Take Photo", Colors.orange, () {
-      api.storeImage(project: _currentProject, label: _currentLabel).then((value) {
+      api.storeImage(project: _currentProject, label: _currentLabel, fileSystemPath: _applicationSupportDir).then((value) {
         // From https://stackoverflow.com/questions/13110542/how-to-get-a-timestamp-in-dart
         DateTime _now = DateTime.now();
         otherMsg = 'timestamp: ${_now.hour}:${_now.minute}:${_now.second}.${_now.millisecond}';
@@ -182,7 +186,7 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget addProject() {
     return makeCmdButton("Add Project", Colors.blue, () {
-      api.addProject().then((value) {
+      api.addProject(fileSystemPath: _applicationSupportDir).then((value) {
         updateProjects();
       });
     });
@@ -194,7 +198,7 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget addLabel() {
     return makeCmdButton("Add Label", Colors.green, () {
-      api.addLabel(project: _currentProject).then((value) {
+      api.addLabel(fileSystemPath: _applicationSupportDir, project: _currentProject).then((value) {
         updateLabels(_currentProject);
       });
     });
@@ -244,19 +248,26 @@ class SelectorPageState extends State<SelectorPage> {
               appBar: AppBar(
                   title: const Text("This is a title")),
               body: Center(
-                  child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        selectorButton(
-                            "Image", Colors.blue, () => SimpleImageRunner()),
-                        selectorButton(
-                            "Akaze", Colors.cyan, () => AkazeImageRunner()),
-                        selectorButton(
-                            "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
-                        selectorButton(
-                          "Photographer", Colors.yellow, () => PhotoImageRunner()),
-                      ]
-                  )
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    Text(_applicationSupportDir),
+                    Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          selectorButton(
+                              "Image", Colors.blue, () => SimpleImageRunner()),
+                          selectorButton(
+                              "Akaze", Colors.cyan, () => AkazeImageRunner()),
+                          selectorButton(
+                              "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
+                          selectorButton(
+                              "Photographer", Colors.yellow, () => PhotoImageRunner()),
+
+                        ]
+                    )
+                  ]
+                )
               )
           )
       );

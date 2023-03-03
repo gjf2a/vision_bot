@@ -54,15 +54,18 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kParseSensorDataConstMeta;
 
-  Future<List<String>> listProjects({dynamic hint});
+  Future<List<String>> listProjects(
+      {required String fileSystemPath, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kListProjectsConstMeta;
 
-  Future<List<String>> listLabels({required String project, dynamic hint});
+  Future<List<String>> listLabels(
+      {required String fileSystemPath, required String project, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kListLabelsConstMeta;
 
-  Future<FileSystemOutcome> addProject({dynamic hint});
+  Future<FileSystemOutcome> addProject(
+      {required String fileSystemPath, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kAddProjectConstMeta;
 
@@ -71,12 +74,16 @@ abstract class Native {
 
   FlutterRustBridgeTaskConstMeta get kRenameProjectConstMeta;
 
-  Future<FileSystemOutcome> addLabel({required String project, dynamic hint});
+  Future<FileSystemOutcome> addLabel(
+      {required String fileSystemPath, required String project, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kAddLabelConstMeta;
 
   Future<FileSystemOutcome> storeImage(
-      {required String project, required String label, dynamic hint});
+      {required String fileSystemPath,
+      required String project,
+      required String label,
+      dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kStoreImageConstMeta;
 

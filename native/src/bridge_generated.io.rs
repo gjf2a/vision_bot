@@ -57,18 +57,22 @@ pub extern "C" fn wire_parse_sensor_data(port_: i64, incoming_data: *mut wire_ui
 }
 
 #[no_mangle]
-pub extern "C" fn wire_list_projects(port_: i64) {
-    wire_list_projects_impl(port_)
+pub extern "C" fn wire_list_projects(port_: i64, file_system_path: *mut wire_uint_8_list) {
+    wire_list_projects_impl(port_, file_system_path)
 }
 
 #[no_mangle]
-pub extern "C" fn wire_list_labels(port_: i64, project: *mut wire_uint_8_list) {
-    wire_list_labels_impl(port_, project)
+pub extern "C" fn wire_list_labels(
+    port_: i64,
+    file_system_path: *mut wire_uint_8_list,
+    project: *mut wire_uint_8_list,
+) {
+    wire_list_labels_impl(port_, file_system_path, project)
 }
 
 #[no_mangle]
-pub extern "C" fn wire_add_project(port_: i64) {
-    wire_add_project_impl(port_)
+pub extern "C" fn wire_add_project(port_: i64, file_system_path: *mut wire_uint_8_list) {
+    wire_add_project_impl(port_, file_system_path)
 }
 
 #[no_mangle]
@@ -81,17 +85,22 @@ pub extern "C" fn wire_rename_project(
 }
 
 #[no_mangle]
-pub extern "C" fn wire_add_label(port_: i64, project: *mut wire_uint_8_list) {
-    wire_add_label_impl(port_, project)
+pub extern "C" fn wire_add_label(
+    port_: i64,
+    file_system_path: *mut wire_uint_8_list,
+    project: *mut wire_uint_8_list,
+) {
+    wire_add_label_impl(port_, file_system_path, project)
 }
 
 #[no_mangle]
 pub extern "C" fn wire_store_image(
     port_: i64,
+    file_system_path: *mut wire_uint_8_list,
     project: *mut wire_uint_8_list,
     label: *mut wire_uint_8_list,
 ) {
-    wire_store_image_impl(port_, project, label)
+    wire_store_image_impl(port_, file_system_path, project, label)
 }
 
 #[no_mangle]

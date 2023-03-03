@@ -161,17 +161,27 @@ fn wire_parse_sensor_data_impl(
         },
     )
 }
-fn wire_list_projects_impl(port_: MessagePort) {
+fn wire_list_projects_impl(
+    port_: MessagePort,
+    file_system_path: impl Wire2Api<String> + UnwindSafe,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "list_projects",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || move |task_callback| Ok(list_projects()),
+        move || {
+            let api_file_system_path = file_system_path.wire2api();
+            move |task_callback| Ok(list_projects(api_file_system_path))
+        },
     )
 }
-fn wire_list_labels_impl(port_: MessagePort, project: impl Wire2Api<String> + UnwindSafe) {
+fn wire_list_labels_impl(
+    port_: MessagePort,
+    file_system_path: impl Wire2Api<String> + UnwindSafe,
+    project: impl Wire2Api<String> + UnwindSafe,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "list_labels",
@@ -179,19 +189,23 @@ fn wire_list_labels_impl(port_: MessagePort, project: impl Wire2Api<String> + Un
             mode: FfiCallMode::Normal,
         },
         move || {
+            let api_file_system_path = file_system_path.wire2api();
             let api_project = project.wire2api();
-            move |task_callback| Ok(list_labels(api_project))
+            move |task_callback| Ok(list_labels(api_file_system_path, api_project))
         },
     )
 }
-fn wire_add_project_impl(port_: MessagePort) {
+fn wire_add_project_impl(port_: MessagePort, file_system_path: impl Wire2Api<String> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "add_project",
             port: Some(port_),
             mode: FfiCallMode::Normal,
         },
-        move || move |task_callback| Ok(add_project()),
+        move || {
+            let api_file_system_path = file_system_path.wire2api();
+            move |task_callback| Ok(add_project(api_file_system_path))
+        },
     )
 }
 fn wire_rename_project_impl(
@@ -212,7 +226,11 @@ fn wire_rename_project_impl(
         },
     )
 }
-fn wire_add_label_impl(port_: MessagePort, project: impl Wire2Api<String> + UnwindSafe) {
+fn wire_add_label_impl(
+    port_: MessagePort,
+    file_system_path: impl Wire2Api<String> + UnwindSafe,
+    project: impl Wire2Api<String> + UnwindSafe,
+) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "add_label",
@@ -220,13 +238,15 @@ fn wire_add_label_impl(port_: MessagePort, project: impl Wire2Api<String> + Unwi
             mode: FfiCallMode::Normal,
         },
         move || {
+            let api_file_system_path = file_system_path.wire2api();
             let api_project = project.wire2api();
-            move |task_callback| Ok(add_label(api_project))
+            move |task_callback| Ok(add_label(api_file_system_path, api_project))
         },
     )
 }
 fn wire_store_image_impl(
     port_: MessagePort,
+    file_system_path: impl Wire2Api<String> + UnwindSafe,
     project: impl Wire2Api<String> + UnwindSafe,
     label: impl Wire2Api<String> + UnwindSafe,
 ) {
@@ -237,9 +257,10 @@ fn wire_store_image_impl(
             mode: FfiCallMode::Normal,
         },
         move || {
+            let api_file_system_path = file_system_path.wire2api();
             let api_project = project.wire2api();
             let api_label = label.wire2api();
-            move |task_callback| Ok(store_image(api_project, api_label))
+            move |task_callback| Ok(store_image(api_file_system_path, api_project, api_label))
         },
     )
 }

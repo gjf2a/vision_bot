@@ -14,11 +14,11 @@ use std::{
     sync::atomic::{AtomicBool, AtomicU64, Ordering},
 };
 
-const PROJECT_PATH: &str = "projects";
-
 use crate::image_proc::{
     convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple, self,
 };
+
+const PROJECT_DIR: &str = "projects";
 
 lazy_static! {
     static ref POS: Mutex<RobotSensorPosition> = Mutex::new(RobotSensorPosition::new(BOT));
@@ -292,37 +292,41 @@ impl FileSystemOutcome {
     }
 }
 
-pub fn list_projects() -> Vec<String> {
-    match list(PROJECT_PATH.to_owned()) {
-        Ok(result) => result,
-        Err(_) => {
-            match std::fs::create_dir(PROJECT_PATH) {
-                Ok(_) => {
-                    match add_project() {
-                        FileSystemOutcome::Success => {
-                            match list(PROJECT_PATH.to_owned()) {
-                                Err(e) => vec![format!("Error: {e}")],
-                                Ok(v) => {
-                                    match add_label(v[0].clone()) {
-                                        FileSystemOutcome::Success => v,
-                                        FileSystemOutcome::Failure => vec!["No label!".to_owned()],
-                                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
-                                    }
+fn project_path(file_system_path: String) -> String {
+    format!("{file_system_path}/{PROJECT_DIR}")
+}
+
+pub fn list_projects(file_system_path: String) -> Vec<String> {
+    let project_path = project_path(file_system_path.clone());
+    match list(project_path.clone()) {
+        Err(e) => vec![format!("Error: {e}")],
+        Ok(result) => {
+            if result.len() == 0 {
+                match add_project(file_system_path.clone()) {
+                    FileSystemOutcome::Success => {
+                        match list(project_path.clone()) {
+                            Err(e) => vec![format!("Error: {e}")],
+                            Ok(v) => {
+                                match add_label(file_system_path, v[0].clone()) {
+                                    FileSystemOutcome::Success => v,
+                                    FileSystemOutcome::Failure => vec!["No label!".to_owned()],
+                                    FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
                                 }
                             }
                         }
-                        FileSystemOutcome::Failure => vec!["No project!".to_owned()],
-                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
                     }
+                    FileSystemOutcome::Failure => vec!["No project!".to_owned()],
+                    FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
                 }
-                Err(e) => vec![format!("Error: {e}")]
+            } else {
+                result
             }
         }
     }
 }
 
-pub fn list_labels(project: String) -> Vec<String> {
-    match list(format!("{PROJECT_PATH}/{project}")) {
+pub fn list_labels(file_system_path: String, project: String) -> Vec<String> {
+    match list(format!("{}/{project}", project_path(file_system_path.clone()))) {
         Ok(result) => result,
         Err(e) => vec![format!("Error: {e}")]
     }
@@ -343,11 +347,11 @@ fn invent_name_for(prefix: &str, names: &Vec<String>) -> String {
     format!("{prefix}{}", names.len() + 1)
 }
 
-pub fn add_project() -> FileSystemOutcome {
-    let name = invent_name_for("Project", &list_projects());
-    let outcome = FileSystemOutcome::from(std::fs::create_dir(name.clone())); 
+pub fn add_project(file_system_path: String) -> FileSystemOutcome {
+    let name = invent_name_for("Project", &list_projects(file_system_path.clone()));
+    let outcome = FileSystemOutcome::from(std::fs::create_dir(format!("{}/{name}", project_path(file_system_path.clone())))); 
     if outcome == FileSystemOutcome::Success {
-        add_label(name)
+        add_label(file_system_path, name)
     } else {
         outcome
     }
@@ -357,12 +361,12 @@ pub fn rename_project(old_name: String, new_name: String) -> FileSystemOutcome {
     FileSystemOutcome::from(std::fs::rename(old_name, new_name))
 }
 
-pub fn add_label(project: String) -> FileSystemOutcome {
-    let label = invent_name_for("Label", &list_labels(project.clone()));
-    FileSystemOutcome::from(std::fs::create_dir(label_path(project, label)))     
+pub fn add_label(file_system_path: String, project: String) -> FileSystemOutcome {
+    let label = invent_name_for("Label", &list_labels(file_system_path.clone(), project.clone()));
+    FileSystemOutcome::from(std::fs::create_dir(label_path(file_system_path, project, label)))     
 }
 
-pub fn store_image(project: String, label: String) -> FileSystemOutcome {
+pub fn store_image(file_system_path: String, project: String, label: String) -> FileSystemOutcome {
     let last_image = {
         LAST_IMAGE.lock().unwrap().clone()
     };
@@ -370,7 +374,7 @@ pub fn store_image(project: String, label: String) -> FileSystemOutcome {
     match last_image {
         Some(last_image) => {
             let encoded = image_proc::convert(&last_image);
-            let mut path = label_path(project, label);
+            let mut path = label_path(file_system_path, project, label);
             path.push(invent_filename("Image", &path));
             FileSystemOutcome::from(encoded.save(path))
         }
@@ -394,9 +398,9 @@ pub fn photographer_background(img: ImageData) -> ImageResponse {
     yuv_rgba(img)
 }
 
-fn label_path(project: String, label: String) -> PathBuf {
-    let mut path = PathBuf::new();
-    path.push(project);
-    path.push(label);
-    path
+fn label_path(file_system_path: String, project: String, label: String) -> PathBuf {
+    let mut result = PathBuf::from(file_system_path);
+    result.push(project);
+    result.push(label);
+    result
 }
