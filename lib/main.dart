@@ -1,7 +1,5 @@
 import 'dart:collection';
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:vision_bot/robot.dart';
 
@@ -12,6 +10,8 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'ffi.dart';
 
 import 'package:collection/collection.dart';
+
+import 'projects.dart';
 
 const int ourPort = 8888;
 
@@ -140,15 +140,30 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Future<void> _setupProjects() async {
-    Directory appDir = await getApplicationSupportDirectory();
+    /*
+    Directory appDir = await getApplicationDocumentsDirectory();
     _applicationSupportDir = appDir.path;
     _projects = await api.listProjects(fileSystemPath: _applicationSupportDir);
     _currentProject = _projects[0];
     updateLabels(_currentProject);
+     */
+    Directory appDir = await getApplicationSupportDirectory();
+    _applicationSupportDir = appDir.path;
+    _projects = await listProjects(Directory(_applicationSupportDir));
+    _currentProject = _projects.length == 0 ? "None" : _projects[0];
+    updateLabels(_currentProject);
   }
 
   void updateProjects() {
+    /*
     api.listProjects(fileSystemPath: _applicationSupportDir).then((updatedProjects) {
+      setState(() {
+        _projects = updatedProjects;
+        updateLabels(_currentProject);
+      });
+    });
+     */
+    listProjects(Directory(_applicationSupportDir)).then((updatedProjects) {
       setState(() {
         _projects = updatedProjects;
         updateLabels(_currentProject);
@@ -157,7 +172,16 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void updateLabels(String project) {
+    /*
     api.listLabels(fileSystemPath: _applicationSupportDir, project: project).then((updatedLabels) {
+      setState(() {
+        _currentProject = project;
+        _labels = updatedLabels;
+        _currentLabel = updatedLabels[0];
+      });
+    });
+     */
+    listLabels(Directory(_applicationSupportDir), project).then((updatedLabels) {
       setState(() {
         _currentProject = project;
         _labels = updatedLabels;
@@ -178,15 +202,23 @@ class SelectorPageState extends State<SelectorPage> {
     return makeCmdButton("Take Photo", Colors.orange, () {
       api.storeImage(project: _currentProject, label: _currentLabel, fileSystemPath: _applicationSupportDir).then((value) {
         // From https://stackoverflow.com/questions/13110542/how-to-get-a-timestamp-in-dart
-        DateTime _now = DateTime.now();
-        otherMsg = 'timestamp: ${_now.hour}:${_now.minute}:${_now.second}.${_now.millisecond}';
+        DateTime now = DateTime.now();
+        otherMsg = 'timestamp: ${now.hour}:${now.minute}:${now.second}.${now.millisecond}';
       });
     });
   }
 
   Widget addProject() {
+    /*
     return makeCmdButton("Add Project", Colors.blue, () {
       api.addProject(fileSystemPath: _applicationSupportDir).then((value) {
+        updateProjects();
+      });
+    });
+     */
+    return makeCmdButton("Add Project", Colors.blue, () {
+      addNewProject(Directory(_applicationSupportDir)).then((value) {
+        _currentProject = value;
         updateProjects();
       });
     });

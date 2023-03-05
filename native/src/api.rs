@@ -299,27 +299,28 @@ fn project_path(file_system_path: String) -> String {
 pub fn list_projects(file_system_path: String) -> Vec<String> {
     let project_path = project_path(file_system_path.clone());
     match list(project_path.clone()) {
-        Err(e) => vec![format!("Error: {e}")],
-        Ok(result) => {
-            if result.len() == 0 {
-                match add_project(file_system_path.clone()) {
-                    FileSystemOutcome::Success => {
-                        match list(project_path.clone()) {
-                            Err(e) => vec![format!("Error: {e}")],
-                            Ok(v) => {
-                                match add_label(file_system_path, v[0].clone()) {
-                                    FileSystemOutcome::Success => v,
-                                    FileSystemOutcome::Failure => vec!["No label!".to_owned()],
-                                    FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
+        Ok(result) => result,
+        Err(_) => {
+            match std::fs::create_dir(PROJECT_DIR) {
+                Err(e) => vec![format!("Error 1: {e}")],
+                Ok(_) => {
+                    match add_project(file_system_path.clone()) {
+                        FileSystemOutcome::Success => {
+                            match list(project_path.clone()) {
+                                Err(e) => vec![format!("Error 2: {e}")],
+                                Ok(v) => {
+                                    match add_label(file_system_path, v[0].clone()) {
+                                        FileSystemOutcome::Success => v,
+                                        FileSystemOutcome::Failure => vec!["No label!".to_owned()],
+                                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
+                                    }
                                 }
                             }
                         }
+                        FileSystemOutcome::Failure => vec!["No project!".to_owned()],
+                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
                     }
-                    FileSystemOutcome::Failure => vec!["No project!".to_owned()],
-                    FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
                 }
-            } else {
-                result
             }
         }
     }
@@ -328,7 +329,7 @@ pub fn list_projects(file_system_path: String) -> Vec<String> {
 pub fn list_labels(file_system_path: String, project: String) -> Vec<String> {
     match list(format!("{}/{project}", project_path(file_system_path.clone()))) {
         Ok(result) => result,
-        Err(e) => vec![format!("Error: {e}")]
+        Err(e) => vec![format!("Error 3: {e}")]
     }
 }
 
