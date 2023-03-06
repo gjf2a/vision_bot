@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as dartui;
 
 const String projectDirName = "projects";
@@ -82,4 +83,18 @@ Future<String> saveImage(dartui.Image img, Directory fileSystemPath, String proj
   File file = File("${projectDir.path}/$project/$label/$photoName");
   file = await file.writeAsBytes(bytes, flush: true);
   return photoName;
+}
+
+Future<List<dartui.Image>> loadImages(Directory fileSystemPath, String project, String label) async {
+  Directory projectDir = await getProjectDir(fileSystemPath);
+  Directory labelDir = Directory("${projectDir.path}/$project/$label");
+  List<dartui.Image> result = [];
+  for (FileSystemEntity f in labelDir.listSync()) {
+    File file = File(f.path);
+    Uint8List data = await file.readAsBytes();
+    dartui.Codec codec = await dartui.instantiateImageCodec(data);
+    dartui.FrameInfo frame = await codec.getNextFrame();
+    result.add(frame.image);
+  }
+  return result;
 }
