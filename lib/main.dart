@@ -13,6 +13,8 @@ import 'package:collection/collection.dart';
 
 import 'projects.dart';
 
+import 'dart:ui' as dartui;
+
 const int ourPort = 8888;
 
 late List<CameraDescription> _cameras;
@@ -140,13 +142,6 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Future<void> _setupProjects() async {
-    /*
-    Directory appDir = await getApplicationDocumentsDirectory();
-    _applicationSupportDir = appDir.path;
-    _projects = await api.listProjects(fileSystemPath: _applicationSupportDir);
-    _currentProject = _projects[0];
-    updateLabels(_currentProject);
-     */
     Directory appDir = await getApplicationSupportDirectory();
     _applicationSupportDir = appDir.path;
     _projects = await listProjects(Directory(_applicationSupportDir));
@@ -155,14 +150,6 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void updateProjects() {
-    /*
-    api.listProjects(fileSystemPath: _applicationSupportDir).then((updatedProjects) {
-      setState(() {
-        _projects = updatedProjects;
-        updateLabels(_currentProject);
-      });
-    });
-     */
     listProjects(Directory(_applicationSupportDir)).then((updatedProjects) {
       setState(() {
         _projects = updatedProjects;
@@ -172,15 +159,6 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void updateLabels(String project) {
-    /*
-    api.listLabels(fileSystemPath: _applicationSupportDir, project: project).then((updatedLabels) {
-      setState(() {
-        _currentProject = project;
-        _labels = updatedLabels;
-        _currentLabel = updatedLabels[0];
-      });
-    });
-     */
     listLabels(Directory(_applicationSupportDir), project).then((updatedLabels) {
       setState(() {
         _currentProject = project;
@@ -200,22 +178,16 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget takePhoto() {
     return makeCmdButton("Take Photo", Colors.orange, () {
-      api.storeImage(project: _currentProject, label: _currentLabel, fileSystemPath: _applicationSupportDir).then((value) {
-        // From https://stackoverflow.com/questions/13110542/how-to-get-a-timestamp-in-dart
-        DateTime now = DateTime.now();
-        otherMsg = 'timestamp: ${now.hour}:${now.minute}:${now.second}.${now.millisecond}';
+      dartui.Image img = running!.livePicture().getImage();
+      saveImage(img, Directory(_applicationSupportDir), _currentProject, _currentLabel).then((value) {
+        setState(() {
+          otherMsg = value;
+        });
       });
     });
   }
 
   Widget addProject() {
-    /*
-    return makeCmdButton("Add Project", Colors.blue, () {
-      api.addProject(fileSystemPath: _applicationSupportDir).then((value) {
-        updateProjects();
-      });
-    });
-     */
     return makeCmdButton("Add Project", Colors.blue, () {
       addNewProject(Directory(_applicationSupportDir)).then((value) {
         _currentProject = value;
@@ -242,13 +214,6 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Widget addLabel() {
-    /*
-    return makeCmdButton("Add Label", Colors.green, () {
-      api.addLabel(fileSystemPath: _applicationSupportDir, project: _currentProject).then((value) {
-        updateLabels(_currentProject);
-      });
-    });
-     */
     return makeCmdButton("Add Label", Colors.green, () {
       addNewLabel(Directory(_applicationSupportDir), _currentProject).then((value) {
         updateLabels(_currentProject);
@@ -323,7 +288,6 @@ class SelectorPageState extends State<SelectorPage> {
                               "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
                           selectorButton(
                               "Photographer", Colors.yellow, () => PhotoImageRunner()),
-
                         ]
                     )
                   ]

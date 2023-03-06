@@ -125,7 +125,7 @@ class AkazeImageFlowRunner extends VisionRunner {
 }
 
 class PhotoImageRunner extends VisionRunner  {
-  final CameraImagePainter _livePicture = CameraImagePainter(api.yuvRgba);
+  final CameraImagePainter _livePicture = CameraImagePainter(api.photographerBackground);
 
   @override
   Widget display(SelectorPageState selector) {
@@ -145,7 +145,8 @@ class PhotoImageRunner extends VisionRunner  {
                           Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
                           Text(selector.incoming),
                           Text(_livePicture.lastMessage),
-                          //selector.takePhoto(),
+                          selector.takePhoto(),
+                          Text(selector.otherMsg),
                         ],
                       ),
                       Column(
@@ -217,6 +218,8 @@ class CameraImagePainter extends CustomPainter {
     _fps = 0.0;
     _frameCount = 0;
   }
+
+  dartui.Image getImage() {return _lastImage;}
 
   @override
   void paint(Canvas canvas, Size size) {

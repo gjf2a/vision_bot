@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as dartui;
 
 const String projectDirName = "projects";
 
@@ -69,4 +70,16 @@ Future<void> renameExistingLabel(Directory fileSystemPath, String project, Strin
   Directory projectDir = await getProjectDir(fileSystemPath);
   Directory namedDir = Directory("${projectDir.path}/$project/$oldName");
   namedDir.rename("${projectDir.path}/$project/$newName");
+}
+
+// How to do this: https://stackoverflow.com/questions/69600988/flutter-convert-ui-image-to-a-file
+Future<String> saveImage(dartui.Image img, Directory fileSystemPath, String project, String label) async {
+  Directory projectDir = await getProjectDir(fileSystemPath);
+  final data = await img.toByteData(format: dartui.ImageByteFormat.png);
+  final bytes = data!.buffer.asUint8List();
+  DateTime now = DateTime.now();
+  String photoName = "ph_${now.hour}_${now.minute}_${now.second}_${now.millisecond}.png";
+  File file = File("${projectDir.path}/$project/$label/$photoName");
+  file = await file.writeAsBytes(bytes, flush: true);
+  return photoName;
 }
