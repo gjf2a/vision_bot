@@ -224,21 +224,49 @@ class SelectorPageState extends State<SelectorPage> {
     });
   }
 
-  /*Widget renameProject() {
-
-  }*/
+  Widget renameProject() {
+    // SizedBox() fixes RenderBox problem:
+    // https://stackoverflow.com/questions/51809451/how-to-solve-renderbox-was-not-laid-out-in-flutter-in-a-card-widget
+    return SizedBox(width: 150,
+    child: TextField(
+      decoration: const InputDecoration(hintText: "Rename Project", border: UnderlineInputBorder()),
+      onSubmitted: (value) {
+        renameExistingProject(Directory(_applicationSupportDir), _currentProject, value).then((nothing) {
+          setState(() {
+            _currentProject = value;
+            updateProjects();
+          });
+        });
+        },
+    ));
+  }
 
   Widget addLabel() {
+    /*
     return makeCmdButton("Add Label", Colors.green, () {
       api.addLabel(fileSystemPath: _applicationSupportDir, project: _currentProject).then((value) {
         updateLabels(_currentProject);
       });
     });
+     */
+    return makeCmdButton("Add Label", Colors.green, () {
+      addNewLabel(Directory(_applicationSupportDir), _currentProject).then((value) {
+        updateLabels(_currentProject);
+      });
+    });
   }
 
-  /*Widget renameLabel() {
-
-  }*/
+  Widget renameLabel() {
+    return SizedBox(width: 150, child: TextField(
+      decoration: const InputDecoration(hintText: "Rename Label"),
+      onSubmitted: (value) {
+        renameExistingLabel(Directory(_applicationSupportDir), _currentProject, _currentLabel, value).then((nothing) {
+          _currentLabel = value;
+          updateLabels(_currentProject);
+        });
+      },
+    ));
+  }
 
   void _listenToSocket(Socket socket) {
     socket.listen((data) {

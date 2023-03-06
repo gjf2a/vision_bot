@@ -145,14 +145,25 @@ class PhotoImageRunner extends VisionRunner  {
                           Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
                           Text(selector.incoming),
                           Text(_livePicture.lastMessage),
-                          //selector.testDropdown(),
-                          selector.addProject(),
-                          selector.projectChoices(),
-                          selector.addLabel(),
-                          selector.labelChoices(),
                           //selector.takePhoto(),
                         ],
                       ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          selector.addProject(),
+                          selector.renameProject(),
+                          selector.projectChoices(),
+                        ],
+                      ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          selector.addLabel(),
+                          selector.renameLabel(),
+                          selector.labelChoices(),
+                        ],
+                      )
                     ]
                 )
             )
