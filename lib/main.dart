@@ -168,7 +168,7 @@ class SelectorPageState extends State<SelectorPage> {
         _labels = updatedLabels;
         if (updatedLabels.isNotEmpty) {
           _currentLabel = updatedLabels[0];
-          refreshImages();
+          refreshImages(0);
         } else {
           _loadedPhotos = [];
         }
@@ -181,14 +181,14 @@ class SelectorPageState extends State<SelectorPage> {
       return const Text("No photos");
     } else {
       List<Widget> column = [];
+      column.add(SizedBox(height: 100, child: CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto]))));
+
       if (_currentPhoto > 0) {
         column.add(TextButton(onPressed: () { setState(() {
           _currentPhoto -= 1;
         });}, child: const Text("Previous"),));
       }
 
-      column.add(CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto])));
-      
       if (_currentPhoto + 1 < _loadedPhotos.length) {
         column.add(TextButton(onPressed: () {setState(() {
           _currentPhoto += 1;
@@ -199,11 +199,11 @@ class SelectorPageState extends State<SelectorPage> {
     }
   }
 
-  void refreshImages() {
+  void refreshImages(int photoChoice) {
     loadImages(Directory(_applicationSupportDir), _currentProject, _currentLabel).then((loaded) {
       setState(() {
         _loadedPhotos = loaded;
-        _currentPhoto = 0;
+        _currentPhoto = photoChoice;
       });
     });
   }
@@ -215,16 +215,18 @@ class SelectorPageState extends State<SelectorPage> {
   Widget labelChoices() {
     return makeChoices(_currentLabel, _labels, (label) {
       _currentLabel = label;
-      refreshImages();
+      refreshImages(0);
     });
   }
 
   Widget takePhoto() {
     return makeCmdButton("Take Photo", Colors.orange, () {
       dartui.Image img = running!.livePicture().getImage();
+      int sizeBeforeSave = _loadedPhotos.length;
       saveImage(img, Directory(_applicationSupportDir), _currentProject, _currentLabel).then((value) {
         setState(() {
           otherMsg = value;
+          refreshImages(sizeBeforeSave);
         });
       });
     });
@@ -441,5 +443,4 @@ class StillPhotoPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
-
 }

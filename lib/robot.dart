@@ -137,7 +137,7 @@ class PhotoImageRunner extends VisionRunner  {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      CustomPaint(painter: _livePicture),
+                      SizedBox(width: 50, child: CustomPaint(painter: _livePicture)),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
