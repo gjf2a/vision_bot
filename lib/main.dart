@@ -83,7 +83,7 @@ class SelectorPageState extends State<SelectorPage> {
   String _currentLabel = "None";
   String _test = "Alpha";
 
-  List<dartui.Image> _loadedPhotos = [];
+  List<PhotoInfo> _loadedPhotos = [];
   int _currentPhoto = 0;
 
   Widget startStopButton() {
@@ -181,7 +181,8 @@ class SelectorPageState extends State<SelectorPage> {
       return const Text("No photos");
     } else {
       List<Widget> column = [];
-      column.add(SizedBox(height: 100, child: CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto]))));
+      column.add(SizedBox(height: 100, child: CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto].photo))));
+      column.add(Text(_loadedPhotos[_currentPhoto].filename()));
 
       if (_currentPhoto > 0) {
         column.add(TextButton(onPressed: () { setState(() {
@@ -194,6 +195,8 @@ class SelectorPageState extends State<SelectorPage> {
           _currentPhoto += 1;
         });}, child: const Text("Next")));
       }
+
+      column.add(deletePhoto());
 
       return Column(mainAxisAlignment: MainAxisAlignment.center, children: column);
     }
@@ -229,6 +232,23 @@ class SelectorPageState extends State<SelectorPage> {
           refreshImages(sizeBeforeSave);
         });
       });
+    });
+  }
+
+  Widget deletePhoto() {
+    return makeCmdButton("Delete Photo", Colors.red, () {
+      if (_loadedPhotos.isNotEmpty) {
+        File deleteMe = File(_loadedPhotos[_currentPhoto].filePath);
+        deleteMe.delete().then((value) {
+          setState(() {
+            otherMsg = "deleted";
+            if (_loadedPhotos.length > 1) {
+              _currentPhoto -= 1;
+            }
+            refreshImages(_currentPhoto);
+          });
+        });
+      }
     });
   }
 
@@ -321,7 +341,7 @@ class SelectorPageState extends State<SelectorPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Text(_applicationSupportDir),
+                    //Text(_applicationSupportDir),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[

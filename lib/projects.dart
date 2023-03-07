@@ -85,17 +85,28 @@ Future<String> saveImage(dartui.Image img, Directory fileSystemPath, String proj
   return photoName;
 }
 
-Future<List<dartui.Image>> loadImages(Directory fileSystemPath, String project, String label) async {
+class PhotoInfo {
+  dartui.Image photo;
+  String filePath;
+
+  PhotoInfo(this.photo, this.filePath);
+
+  String filename() {
+    return filePath.split("/").last;
+  }
+}
+
+Future<List<PhotoInfo>> loadImages(Directory fileSystemPath, String project, String label) async {
   Directory projectDir = await getProjectDir(fileSystemPath);
   Directory labelDir = Directory("${projectDir.path}/$project/$label");
-  List<dartui.Image> result = [];
+  List<PhotoInfo> result = [];
   for (FileSystemEntity f in labelDir.listSync()) {
     File file = File(f.path);
     Uint8List data = await file.readAsBytes();
     // From https://stackoverflow.com/a/64906539/906268
     dartui.Codec codec = await dartui.instantiateImageCodec(data);
     dartui.FrameInfo frame = await codec.getNextFrame();
-    result.add(frame.image);
+    result.add(PhotoInfo(frame.image, file.path));
   }
   return result;
 }
