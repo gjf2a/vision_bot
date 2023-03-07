@@ -83,6 +83,9 @@ class SelectorPageState extends State<SelectorPage> {
   String _currentLabel = "None";
   String _test = "Alpha";
 
+  List<dartui.Image> _loadedPhotos = [];
+  int _currentPhoto = 0;
+
   Widget startStopButton() {
     if (_robotStatus == RobotStatus.notStarted) {
       return makeCmdButton("Start", Colors.purple, () {
@@ -145,7 +148,7 @@ class SelectorPageState extends State<SelectorPage> {
     Directory appDir = await getApplicationSupportDirectory();
     _applicationSupportDir = appDir.path;
     _projects = await listProjects(Directory(_applicationSupportDir));
-    _currentProject = _projects.length == 0 ? "None" : _projects[0];
+    _currentProject = _projects.isEmpty ? "None" : _projects[0];
     updateLabels(_currentProject);
   }
 
@@ -163,7 +166,44 @@ class SelectorPageState extends State<SelectorPage> {
       setState(() {
         _currentProject = project;
         _labels = updatedLabels;
-        _currentLabel = updatedLabels[0];
+        if (updatedLabels.isNotEmpty) {
+          _currentLabel = updatedLabels[0];
+          refreshImages();
+        } else {
+          _loadedPhotos = [];
+        }
+      });
+    });
+  }
+
+  Widget photoColumn() {
+    if (_loadedPhotos.isEmpty) {
+      return const Text("No photos");
+    } else {
+      List<Widget> column = [];
+      if (_currentPhoto > 0) {
+        column.add(TextButton(onPressed: () { setState(() {
+          _currentPhoto -= 1;
+        });}, child: const Text("Previous"),));
+      }
+
+      column.add(CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto])));
+      
+      if (_currentPhoto + 1 < _loadedPhotos.length) {
+        column.add(TextButton(onPressed: () {setState(() {
+          _currentPhoto += 1;
+        });}, child: const Text("Next")));
+      }
+
+      return Column(mainAxisAlignment: MainAxisAlignment.center, children: column);
+    }
+  }
+
+  void refreshImages() {
+    loadImages(Directory(_applicationSupportDir), _currentProject, _currentLabel).then((loaded) {
+      setState(() {
+        _loadedPhotos = loaded;
+        _currentPhoto = 0;
       });
     });
   }
@@ -173,7 +213,10 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Widget labelChoices() {
-    return makeChoices(_currentLabel, _labels, (label) {_currentLabel = label;});
+    return makeChoices(_currentLabel, _labels, (label) {
+      _currentLabel = label;
+      refreshImages();
+    });
   }
 
   Widget takePhoto() {
@@ -382,4 +425,21 @@ Widget makeCmdButton(String label, Color color, void Function() cmd) {
 
 enum RobotStatus {
   notStarted, started, stopped;
+}
+
+class StillPhotoPainter extends CustomPainter {
+  final dartui.Image _photo;
+
+  StillPhotoPainter(this._photo);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawImage(_photo, Offset(-_photo.width/2, -_photo.height/2), Paint());
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
+  }
+
 }

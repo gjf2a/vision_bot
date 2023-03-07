@@ -92,6 +92,7 @@ Future<List<dartui.Image>> loadImages(Directory fileSystemPath, String project, 
   for (FileSystemEntity f in labelDir.listSync()) {
     File file = File(f.path);
     Uint8List data = await file.readAsBytes();
+    // From https://stackoverflow.com/a/64906539/906268
     dartui.Codec codec = await dartui.instantiateImageCodec(data);
     dartui.FrameInfo frame = await codec.getNextFrame();
     result.add(frame.image);

@@ -164,7 +164,8 @@ class PhotoImageRunner extends VisionRunner  {
                           selector.renameLabel(),
                           selector.labelChoices(),
                         ],
-                      )
+                      ),
+                      selector.photoColumn()
                     ]
                 )
             )
