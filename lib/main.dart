@@ -77,14 +77,18 @@ class SelectorPageState extends State<SelectorPage> {
   RobotState _robotState = RobotState(left: WheelAction.stop, right: WheelAction.stop);
 
   String _applicationSupportDir = "";
-  List<String> _projects = ["None"];
-  List<String> _labels = ["None"];
-  String _currentProject = "None";
-  String _currentLabel = "None";
+  List<String> projects = ["None"];
+  List<String> labels = ["None"];
+  String currentProject = "None";
+  String currentLabel = "None";
   String _test = "Alpha";
 
   List<PhotoInfo> _loadedPhotos = [];
   int _currentPhoto = 0;
+
+  Directory appDir() {
+    return Directory(_applicationSupportDir);
+  }
 
   Widget startStopButton() {
     if (_robotStatus == RobotStatus.notStarted) {
@@ -147,16 +151,16 @@ class SelectorPageState extends State<SelectorPage> {
   Future<void> _setupProjects() async {
     Directory appDir = await getApplicationSupportDirectory();
     _applicationSupportDir = appDir.path;
-    _projects = await listProjects(Directory(_applicationSupportDir));
-    _currentProject = _projects.isEmpty ? "None" : _projects[0];
-    updateLabels(_currentProject);
+    projects = await listProjects(Directory(_applicationSupportDir));
+    currentProject = projects.isEmpty ? "None" : projects[0];
+    updateLabels(currentProject);
   }
 
   void updateProjects() {
     listProjects(Directory(_applicationSupportDir)).then((updatedProjects) {
       setState(() {
-        _projects = updatedProjects;
-        updateLabels(_currentProject);
+        projects = updatedProjects;
+        updateLabels(currentProject);
       });
     });
   }
@@ -164,10 +168,10 @@ class SelectorPageState extends State<SelectorPage> {
   void updateLabels(String project) {
     listLabels(Directory(_applicationSupportDir), project).then((updatedLabels) {
       setState(() {
-        _currentProject = project;
-        _labels = updatedLabels;
+        currentProject = project;
+        labels = updatedLabels;
         if (updatedLabels.isNotEmpty) {
-          _currentLabel = updatedLabels[0];
+          currentLabel = updatedLabels[0];
           refreshImages(0);
         } else {
           _loadedPhotos = [];
@@ -203,7 +207,7 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void refreshImages(int photoChoice) {
-    loadImages(Directory(_applicationSupportDir), _currentProject, _currentLabel).then((loaded) {
+    loadImages(Directory(_applicationSupportDir), currentProject, currentLabel).then((loaded) {
       setState(() {
         _loadedPhotos = loaded;
         _currentPhoto = photoChoice;
@@ -212,12 +216,12 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   Widget projectChoices() {
-    return makeChoices(_currentProject, _projects, updateLabels);
+    return makeChoices(currentProject, projects, updateLabels);
   }
 
   Widget labelChoices() {
-    return makeChoices(_currentLabel, _labels, (label) {
-      _currentLabel = label;
+    return makeChoices(currentLabel, labels, (label) {
+      currentLabel = label;
       refreshImages(0);
     });
   }
@@ -226,7 +230,7 @@ class SelectorPageState extends State<SelectorPage> {
     return makeCmdButton("Take Photo", Colors.orange, () {
       dartui.Image img = running!.livePicture().getImage();
       int sizeBeforeSave = _loadedPhotos.length;
-      saveImage(img, Directory(_applicationSupportDir), _currentProject, _currentLabel).then((value) {
+      saveImage(img, Directory(_applicationSupportDir), currentProject, currentLabel).then((value) {
         setState(() {
           otherMsg = value;
           refreshImages(sizeBeforeSave);
@@ -255,7 +259,7 @@ class SelectorPageState extends State<SelectorPage> {
   Widget addProject() {
     return makeCmdButton("Add Project", Colors.blue, () {
       addNewProject(Directory(_applicationSupportDir)).then((value) {
-        _currentProject = value;
+        currentProject = value;
         updateProjects();
       });
     });
@@ -268,9 +272,9 @@ class SelectorPageState extends State<SelectorPage> {
     child: TextField(
       decoration: const InputDecoration(hintText: "Rename Project", border: UnderlineInputBorder()),
       onSubmitted: (value) {
-        renameExistingProject(Directory(_applicationSupportDir), _currentProject, value).then((nothing) {
+        renameExistingProject(Directory(_applicationSupportDir), currentProject, value).then((nothing) {
           setState(() {
-            _currentProject = value;
+            currentProject = value;
             updateProjects();
           });
         });
@@ -280,8 +284,8 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget addLabel() {
     return makeCmdButton("Add Label", Colors.green, () {
-      addNewLabel(Directory(_applicationSupportDir), _currentProject).then((value) {
-        updateLabels(_currentProject);
+      addNewLabel(Directory(_applicationSupportDir), currentProject).then((value) {
+        updateLabels(currentProject);
       });
     });
   }
@@ -290,9 +294,9 @@ class SelectorPageState extends State<SelectorPage> {
     return SizedBox(width: 150, child: TextField(
       decoration: const InputDecoration(hintText: "Rename Label"),
       onSubmitted: (value) {
-        renameExistingLabel(Directory(_applicationSupportDir), _currentProject, _currentLabel, value).then((nothing) {
-          _currentLabel = value;
-          updateLabels(_currentProject);
+        renameExistingLabel(Directory(_applicationSupportDir), currentProject, currentLabel, value).then((nothing) {
+          currentLabel = value;
+          updateLabels(currentProject);
         });
       },
     ));
@@ -341,7 +345,7 @@ class SelectorPageState extends State<SelectorPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    //Text(_applicationSupportDir),
+                    Text(_applicationSupportDir),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -353,6 +357,7 @@ class SelectorPageState extends State<SelectorPage> {
                               "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
                           selectorButton(
                               "Photographer", Colors.yellow, () => PhotoImageRunner()),
+                          selectorButton("Knn", Colors.deepPurple, () => KnnImageRunner()),
                         ]
                     )
                   ]

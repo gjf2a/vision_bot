@@ -3,11 +3,12 @@ use cv::feature::akaze::KeyPoint;
 use cv::{feature::akaze::Akaze, image::image::DynamicImage};
 use flutter_rust_bridge::support::lazy_static;
 use flutter_rust_bridge::ZeroCopyBuffer;
-use image::{ImageBuffer, Rgba};
+use image::{ImageBuffer, Rgba, RgbaImage, Pixel};
 use kmeans::Kmeans;
+use knn::Knn;
 pub use particle_filter::sonar3bot::{MotorData, RobotSensorPosition, BOT};
+use supervised_learning::Classifier;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use std::{
     collections::BTreeSet,
@@ -15,10 +16,8 @@ use std::{
 };
 
 use crate::image_proc::{
-    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple, self,
+    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple,
 };
-
-const PROJECT_DIR: &str = "projects";
 
 lazy_static! {
     static ref POS: Mutex<RobotSensorPosition> = Mutex::new(RobotSensorPosition::new(BOT));
@@ -31,7 +30,54 @@ lazy_static! {
     static ref LAST_FEATURES: Arc<Mutex<Vec<BitArray<64>>>> = Arc::new(Mutex::new(vec![]));
     static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> =
         Arc::new(Mutex::new(HashSet::new()));
-    static ref LAST_IMAGE: Mutex<Option<ImageData>> = Mutex::new(None);
+
+    static ref KNN_IMAGES: Arc<Mutex<Knn<String, RgbaImage, f64, fn(&RgbaImage,&RgbaImage) -> f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_rgba))));
+}
+
+pub fn train_knn(k: usize, project_path: String) -> String {
+    match train_knn_help(k, project_path.clone()) {
+        Ok(_) => format!("Training finished"),
+        Err(e) => format!("Error training {project_path}: {e}"),
+    }
+}
+
+pub fn classify_knn(img: ImageData) -> String {
+    let img = convert(&img);
+    match KNN_IMAGES.lock() {
+        Ok(knn_images) => {
+            if knn_images.has_enough_examples() {
+                knn_images.classify(&img)
+            } else {
+                "Need more examples".to_string()
+            }
+        }
+        Err(e) => format!("Lock error: {e}")
+    }
+    /*
+    let knn_images = KNN_IMAGES.lock().unwrap();
+    return knn_images.classify(&img);
+    */
+}
+
+fn distance_rgba(img1: &RgbaImage, img2: &RgbaImage) -> f64 {
+    img1.pixels().zip(img2.pixels())
+        .map(|(p1, p2)| p1.channels().iter().zip(p2.channels().iter()).map(|(c1, c2)| (*c1 as f64 - *c2 as f64).powf(2.0)).sum::<f64>())
+        .sum()
+}
+
+fn train_knn_help(k: usize, project_path: String) -> anyhow::Result<()> {
+    let labels = list(project_path.clone())?;
+    let mut training_set = Vec::new();
+    for label in labels {
+        for image_file in list(label.clone())? {
+            let loaded = image::io::Reader::open(format!("{project_path}/{label}/{image_file}"))?.decode()?.to_rgba8();
+            training_set.push((label.clone(), loaded));
+        }
+    }
+    let mut knn_images = KNN_IMAGES.lock().unwrap();
+    knn_images.train(&training_set);
+    knn_images.set_k(k);
+    Ok(())
 }
 
 pub fn kmeans_ready() -> bool {
@@ -292,47 +338,6 @@ impl FileSystemOutcome {
     }
 }
 
-fn project_path(file_system_path: String) -> String {
-    format!("{file_system_path}/{PROJECT_DIR}")
-}
-
-pub fn list_projects(file_system_path: String) -> Vec<String> {
-    let project_path = project_path(file_system_path.clone());
-    match list(project_path.clone()) {
-        Ok(result) => result,
-        Err(_) => {
-            match std::fs::create_dir(PROJECT_DIR) {
-                Err(e) => vec![format!("Error 1: {e}")],
-                Ok(_) => {
-                    match add_project(file_system_path.clone()) {
-                        FileSystemOutcome::Success => {
-                            match list(project_path.clone()) {
-                                Err(e) => vec![format!("Error 2: {e}")],
-                                Ok(v) => {
-                                    match add_label(file_system_path, v[0].clone()) {
-                                        FileSystemOutcome::Success => v,
-                                        FileSystemOutcome::Failure => vec!["No label!".to_owned()],
-                                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
-                                    }
-                                }
-                            }
-                        }
-                        FileSystemOutcome::Failure => vec!["No project!".to_owned()],
-                        FileSystemOutcome::NotAttempted => vec!["Not attempted".to_owned()],
-                    }
-                }
-            }
-        }
-    }
-}
-
-pub fn list_labels(file_system_path: String, project: String) -> Vec<String> {
-    match list(format!("{}/{project}", project_path(file_system_path.clone()))) {
-        Ok(result) => result,
-        Err(e) => vec![format!("Error 3: {e}")]
-    }
-}
-
 fn list(path: String) -> anyhow::Result<Vec<String>> {
     let dir = std::fs::read_dir(path)?;
     let mut list = vec![];
@@ -344,64 +349,3 @@ fn list(path: String) -> anyhow::Result<Vec<String>> {
     Ok(list)
 }
 
-fn invent_name_for(prefix: &str, names: &Vec<String>) -> String {
-    format!("{prefix}{}", names.len() + 1)
-}
-
-pub fn add_project(file_system_path: String) -> FileSystemOutcome {
-    let name = invent_name_for("Project", &list_projects(file_system_path.clone()));
-    let outcome = FileSystemOutcome::from(std::fs::create_dir(format!("{}/{name}", project_path(file_system_path.clone())))); 
-    if outcome == FileSystemOutcome::Success {
-        add_label(file_system_path, name)
-    } else {
-        outcome
-    }
-}
-
-pub fn rename_project(old_name: String, new_name: String) -> FileSystemOutcome {
-    FileSystemOutcome::from(std::fs::rename(old_name, new_name))
-}
-
-pub fn add_label(file_system_path: String, project: String) -> FileSystemOutcome {
-    let label = invent_name_for("Label", &list_labels(file_system_path.clone(), project.clone()));
-    FileSystemOutcome::from(std::fs::create_dir(label_path(file_system_path, project, label)))     
-}
-
-pub fn store_image(file_system_path: String, project: String, label: String) -> FileSystemOutcome {
-    let last_image = {
-        LAST_IMAGE.lock().unwrap().clone()
-    };
-
-    match last_image {
-        Some(last_image) => {
-            let encoded = image_proc::convert(&last_image);
-            let mut path = label_path(file_system_path, project, label);
-            path.push(invent_filename("Image", &path));
-            FileSystemOutcome::from(encoded.save(path))
-        }
-        None => FileSystemOutcome::NotAttempted
-    }
-}
-
-fn invent_filename(prefix: &str, path: &PathBuf) -> String {
-    let file_count = match std::fs::read_dir(path) {
-        Ok(files) => files.count(),
-        Err(_) => 0
-    };
-    format!("{prefix}_{file_count}")
-}
-
-pub fn photographer_background(img: ImageData) -> ImageResponse {
-    {
-        let mut last_image = LAST_IMAGE.lock().unwrap();
-        *last_image = Some(img.clone());
-    }
-    yuv_rgba(img)
-}
-
-fn label_path(file_system_path: String, project: String, label: String) -> PathBuf {
-    let mut result = PathBuf::from(file_system_path);
-    result.push(project);
-    result.push(label);
-    result
-}

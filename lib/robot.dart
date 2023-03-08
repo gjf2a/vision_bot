@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:ui' as dartui;
 
 import 'package:camera/camera.dart';
@@ -125,7 +126,7 @@ class AkazeImageFlowRunner extends VisionRunner {
 }
 
 class PhotoImageRunner extends VisionRunner  {
-  final CameraImagePainter _livePicture = CameraImagePainter(api.photographerBackground);
+  final CameraImagePainter _livePicture = CameraImagePainter(api.yuvRgba);
 
   @override
   Widget display(SelectorPageState selector) {
@@ -176,6 +177,66 @@ class PhotoImageRunner extends VisionRunner  {
   @override
   CameraImagePainter livePicture() {
     return _livePicture;
+  }
+}
+
+class KnnImageRunner extends VisionRunner {
+  final KnnImagePainter _livePicture = KnnImagePainter();
+
+  @override
+  Widget display(SelectorPageState selector) {
+    return MaterialApp(
+        home: Scaffold(
+            appBar: AppBar(
+                title: const Text("Classify a picture")),
+            body: Center(
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(width: 50, child: CustomPaint(painter: _livePicture)),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Text(selector.ipAddr),
+                          Text("Grabbed: ${_livePicture.frameCount()} (${_livePicture.width()} x ${_livePicture.height()}) FPS: ${_livePicture.fps().toStringAsFixed(2)}"),
+                          Text(selector.incoming),
+                          Text(_livePicture.lastMessage),
+                          Text(selector.otherMsg),
+                          Text("Classification: ${_livePicture.label}"),
+                        ],
+                      ),
+                      selector.makeChoices(selector.currentProject, selector.projects, (project) {
+                        selector.currentProject = project;
+                        _livePicture.train(3, selector.appDir(), project).then((value) {selector.otherMsg = "Trained on $project: $value";});
+                      }),
+                    ]
+                )
+            )
+        )
+    );
+  }
+
+  @override
+  CameraImagePainter livePicture() {
+    return _livePicture;
+  }
+}
+
+// Plan: This class sets up the Knn and intercepts images and classifies them.
+// We may need an "intermediate" UI to pick the project and set k.
+class KnnImagePainter extends CameraImagePainter {
+  String label = "None";
+
+  KnnImagePainter() : super(api.yuvRgba);
+
+  Future<String> train(int k, Directory path, String project) async {
+    return await api.trainKnn(k: k, projectPath: "${path.path}/$project");
+  }
+
+  @override
+  Future<void> setImage(CameraImage img) async {
+    await super.setImage(img);
+    label = await api.classifyKnn(img: from(img));
   }
 }
 

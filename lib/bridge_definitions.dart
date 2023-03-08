@@ -7,6 +7,15 @@ import 'dart:async';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 
 abstract class Native {
+  Future<String> trainKnn(
+      {required int k, required String projectPath, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kTrainKnnConstMeta;
+
+  Future<String> classifyKnn({required ImageData img, dynamic hint});
+
+  FlutterRustBridgeTaskConstMeta get kClassifyKnnConstMeta;
+
   Future<bool> kmeansReady({dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kKmeansReadyConstMeta;
@@ -53,50 +62,6 @@ abstract class Native {
       {required String incomingData, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kParseSensorDataConstMeta;
-
-  Future<List<String>> listProjects(
-      {required String fileSystemPath, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kListProjectsConstMeta;
-
-  Future<List<String>> listLabels(
-      {required String fileSystemPath, required String project, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kListLabelsConstMeta;
-
-  Future<FileSystemOutcome> addProject(
-      {required String fileSystemPath, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kAddProjectConstMeta;
-
-  Future<FileSystemOutcome> renameProject(
-      {required String oldName, required String newName, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kRenameProjectConstMeta;
-
-  Future<FileSystemOutcome> addLabel(
-      {required String fileSystemPath, required String project, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kAddLabelConstMeta;
-
-  Future<FileSystemOutcome> storeImage(
-      {required String fileSystemPath,
-      required String project,
-      required String label,
-      dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kStoreImageConstMeta;
-
-  Future<ImageResponse> photographerBackground(
-      {required ImageData img, dynamic hint});
-
-  FlutterRustBridgeTaskConstMeta get kPhotographerBackgroundConstMeta;
-}
-
-enum FileSystemOutcome {
-  Success,
-  Failure,
-  NotAttempted,
 }
 
 class ImageData {

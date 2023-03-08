@@ -23,6 +23,42 @@ class NativeImpl implements Native {
   factory NativeImpl.wasm(FutureOr<WasmModule> module) =>
       NativeImpl(module as ExternalLibrary);
   NativeImpl.raw(this._platform);
+  Future<String> trainKnn(
+      {required int k, required String projectPath, dynamic hint}) {
+    var arg0 = api2wire_usize(k);
+    var arg1 = _platform.api2wire_String(projectPath);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_train_knn(port_, arg0, arg1),
+      parseSuccessData: _wire2api_String,
+      constMeta: kTrainKnnConstMeta,
+      argValues: [k, projectPath],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kTrainKnnConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "train_knn",
+        argNames: ["k", "projectPath"],
+      );
+
+  Future<String> classifyKnn({required ImageData img, dynamic hint}) {
+    var arg0 = _platform.api2wire_box_autoadd_image_data(img);
+    return _platform.executeNormal(FlutterRustBridgeTask(
+      callFfi: (port_) => _platform.inner.wire_classify_knn(port_, arg0),
+      parseSuccessData: _wire2api_String,
+      constMeta: kClassifyKnnConstMeta,
+      argValues: [img],
+      hint: hint,
+    ));
+  }
+
+  FlutterRustBridgeTaskConstMeta get kClassifyKnnConstMeta =>
+      const FlutterRustBridgeTaskConstMeta(
+        debugName: "classify_knn",
+        argNames: ["img"],
+      );
+
   Future<bool> kmeansReady({dynamic hint}) {
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_kmeans_ready(port_),
@@ -210,143 +246,6 @@ class NativeImpl implements Native {
         argNames: ["incomingData"],
       );
 
-  Future<List<String>> listProjects(
-      {required String fileSystemPath, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(fileSystemPath);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_list_projects(port_, arg0),
-      parseSuccessData: _wire2api_StringList,
-      constMeta: kListProjectsConstMeta,
-      argValues: [fileSystemPath],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kListProjectsConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "list_projects",
-        argNames: ["fileSystemPath"],
-      );
-
-  Future<List<String>> listLabels(
-      {required String fileSystemPath, required String project, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(fileSystemPath);
-    var arg1 = _platform.api2wire_String(project);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_list_labels(port_, arg0, arg1),
-      parseSuccessData: _wire2api_StringList,
-      constMeta: kListLabelsConstMeta,
-      argValues: [fileSystemPath, project],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kListLabelsConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "list_labels",
-        argNames: ["fileSystemPath", "project"],
-      );
-
-  Future<FileSystemOutcome> addProject(
-      {required String fileSystemPath, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(fileSystemPath);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_add_project(port_, arg0),
-      parseSuccessData: _wire2api_file_system_outcome,
-      constMeta: kAddProjectConstMeta,
-      argValues: [fileSystemPath],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kAddProjectConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "add_project",
-        argNames: ["fileSystemPath"],
-      );
-
-  Future<FileSystemOutcome> renameProject(
-      {required String oldName, required String newName, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(oldName);
-    var arg1 = _platform.api2wire_String(newName);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) =>
-          _platform.inner.wire_rename_project(port_, arg0, arg1),
-      parseSuccessData: _wire2api_file_system_outcome,
-      constMeta: kRenameProjectConstMeta,
-      argValues: [oldName, newName],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kRenameProjectConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "rename_project",
-        argNames: ["oldName", "newName"],
-      );
-
-  Future<FileSystemOutcome> addLabel(
-      {required String fileSystemPath, required String project, dynamic hint}) {
-    var arg0 = _platform.api2wire_String(fileSystemPath);
-    var arg1 = _platform.api2wire_String(project);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) => _platform.inner.wire_add_label(port_, arg0, arg1),
-      parseSuccessData: _wire2api_file_system_outcome,
-      constMeta: kAddLabelConstMeta,
-      argValues: [fileSystemPath, project],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kAddLabelConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "add_label",
-        argNames: ["fileSystemPath", "project"],
-      );
-
-  Future<FileSystemOutcome> storeImage(
-      {required String fileSystemPath,
-      required String project,
-      required String label,
-      dynamic hint}) {
-    var arg0 = _platform.api2wire_String(fileSystemPath);
-    var arg1 = _platform.api2wire_String(project);
-    var arg2 = _platform.api2wire_String(label);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) =>
-          _platform.inner.wire_store_image(port_, arg0, arg1, arg2),
-      parseSuccessData: _wire2api_file_system_outcome,
-      constMeta: kStoreImageConstMeta,
-      argValues: [fileSystemPath, project, label],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kStoreImageConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "store_image",
-        argNames: ["fileSystemPath", "project", "label"],
-      );
-
-  Future<ImageResponse> photographerBackground(
-      {required ImageData img, dynamic hint}) {
-    var arg0 = _platform.api2wire_box_autoadd_image_data(img);
-    return _platform.executeNormal(FlutterRustBridgeTask(
-      callFfi: (port_) =>
-          _platform.inner.wire_photographer_background(port_, arg0),
-      parseSuccessData: _wire2api_image_response,
-      constMeta: kPhotographerBackgroundConstMeta,
-      argValues: [img],
-      hint: hint,
-    ));
-  }
-
-  FlutterRustBridgeTaskConstMeta get kPhotographerBackgroundConstMeta =>
-      const FlutterRustBridgeTaskConstMeta(
-        debugName: "photographer_background",
-        argNames: ["img"],
-      );
-
   void dispose() {
     _platform.dispose();
   }
@@ -356,24 +255,12 @@ class NativeImpl implements Native {
     return raw as String;
   }
 
-  List<String> _wire2api_StringList(dynamic raw) {
-    return (raw as List<dynamic>).cast<String>();
-  }
-
   Uint8List _wire2api_ZeroCopyBuffer_Uint8List(dynamic raw) {
     return raw as Uint8List;
   }
 
   bool _wire2api_bool(dynamic raw) {
     return raw as bool;
-  }
-
-  FileSystemOutcome _wire2api_file_system_outcome(dynamic raw) {
-    return FileSystemOutcome.values[raw];
-  }
-
-  int _wire2api_i32(dynamic raw) {
-    return raw as int;
   }
 
   int _wire2api_i64(dynamic raw) {
@@ -425,6 +312,10 @@ int api2wire_u8(int raw) {
   return raw;
 }
 
+@protected
+int api2wire_usize(int raw) {
+  return raw;
+}
 // Section: finalizer
 
 class NativePlatform extends FlutterRustBridgeBase<NativeWire> {
@@ -455,6 +346,7 @@ class NativePlatform extends FlutterRustBridgeBase<NativeWire> {
     ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
     return ans;
   }
+
 // Section: finalizer
 
 // Section: api_fill_to_wire
@@ -569,6 +461,42 @@ class NativeWire implements FlutterRustBridgeWireBase {
           'init_frb_dart_api_dl');
   late final _init_frb_dart_api_dl = _init_frb_dart_api_dlPtr
       .asFunction<int Function(ffi.Pointer<ffi.Void>)>();
+
+  void wire_train_knn(
+    int port_,
+    int k,
+    ffi.Pointer<wire_uint_8_list> project_path,
+  ) {
+    return _wire_train_knn(
+      port_,
+      k,
+      project_path,
+    );
+  }
+
+  late final _wire_train_knnPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(ffi.Int64, ffi.UintPtr,
+              ffi.Pointer<wire_uint_8_list>)>>('wire_train_knn');
+  late final _wire_train_knn = _wire_train_knnPtr
+      .asFunction<void Function(int, int, ffi.Pointer<wire_uint_8_list>)>();
+
+  void wire_classify_knn(
+    int port_,
+    ffi.Pointer<wire_ImageData> img,
+  ) {
+    return _wire_classify_knn(
+      port_,
+      img,
+    );
+  }
+
+  late final _wire_classify_knnPtr = _lookup<
+      ffi.NativeFunction<
+          ffi.Void Function(
+              ffi.Int64, ffi.Pointer<wire_ImageData>)>>('wire_classify_knn');
+  late final _wire_classify_knn = _wire_classify_knnPtr
+      .asFunction<void Function(int, ffi.Pointer<wire_ImageData>)>();
 
   void wire_kmeans_ready(
     int port_,
@@ -747,142 +675,6 @@ class NativeWire implements FlutterRustBridgeWireBase {
               ffi.Pointer<wire_uint_8_list>)>>('wire_parse_sensor_data');
   late final _wire_parse_sensor_data = _wire_parse_sensor_dataPtr
       .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_list_projects(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> file_system_path,
-  ) {
-    return _wire_list_projects(
-      port_,
-      file_system_path,
-    );
-  }
-
-  late final _wire_list_projectsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_list_projects');
-  late final _wire_list_projects = _wire_list_projectsPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_list_labels(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> file_system_path,
-    ffi.Pointer<wire_uint_8_list> project,
-  ) {
-    return _wire_list_labels(
-      port_,
-      file_system_path,
-      project,
-    );
-  }
-
-  late final _wire_list_labelsPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_list_labels');
-  late final _wire_list_labels = _wire_list_labelsPtr.asFunction<
-      void Function(
-          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_add_project(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> file_system_path,
-  ) {
-    return _wire_add_project(
-      port_,
-      file_system_path,
-    );
-  }
-
-  late final _wire_add_projectPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_add_project');
-  late final _wire_add_project = _wire_add_projectPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_rename_project(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> old_name,
-    ffi.Pointer<wire_uint_8_list> new_name,
-  ) {
-    return _wire_rename_project(
-      port_,
-      old_name,
-      new_name,
-    );
-  }
-
-  late final _wire_rename_projectPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_rename_project');
-  late final _wire_rename_project = _wire_rename_projectPtr.asFunction<
-      void Function(
-          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_add_label(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> file_system_path,
-    ffi.Pointer<wire_uint_8_list> project,
-  ) {
-    return _wire_add_label(
-      port_,
-      file_system_path,
-      project,
-    );
-  }
-
-  late final _wire_add_labelPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64, ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_add_label');
-  late final _wire_add_label = _wire_add_labelPtr.asFunction<
-      void Function(
-          int, ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_store_image(
-    int port_,
-    ffi.Pointer<wire_uint_8_list> file_system_path,
-    ffi.Pointer<wire_uint_8_list> project,
-    ffi.Pointer<wire_uint_8_list> label,
-  ) {
-    return _wire_store_image(
-      port_,
-      file_system_path,
-      project,
-      label,
-    );
-  }
-
-  late final _wire_store_imagePtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(
-              ffi.Int64,
-              ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_store_image');
-  late final _wire_store_image = _wire_store_imagePtr.asFunction<
-      void Function(int, ffi.Pointer<wire_uint_8_list>,
-          ffi.Pointer<wire_uint_8_list>, ffi.Pointer<wire_uint_8_list>)>();
-
-  void wire_photographer_background(
-    int port_,
-    ffi.Pointer<wire_ImageData> img,
-  ) {
-    return _wire_photographer_background(
-      port_,
-      img,
-    );
-  }
-
-  late final _wire_photographer_backgroundPtr = _lookup<
-      ffi.NativeFunction<
-          ffi.Void Function(ffi.Int64,
-              ffi.Pointer<wire_ImageData>)>>('wire_photographer_background');
-  late final _wire_photographer_background = _wire_photographer_backgroundPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_ImageData>)>();
 
   ffi.Pointer<wire_ImageData> new_box_autoadd_image_data_0() {
     return _new_box_autoadd_image_data_0();
