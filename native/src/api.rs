@@ -8,6 +8,7 @@ use kmeans::Kmeans;
 use knn::Knn;
 pub use particle_filter::sonar3bot::{MotorData, RobotSensorPosition, BOT};
 use supervised_learning::Classifier;
+use std::cmp::min;
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, Mutex};
 use std::{
@@ -31,32 +32,29 @@ lazy_static! {
     static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> =
         Arc::new(Mutex::new(HashSet::new()));
 
-    static ref KNN_IMAGES: Arc<Mutex<Knn<String, RgbaImage, f64, fn(&RgbaImage,&RgbaImage) -> f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_rgba))));
+    static ref KNN_IMAGES: Arc<Mutex<Knn<String, Vec<u8>, f64, fn(&Vec<u8>,&Vec<u8>) -> f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_u8))));
 }
 
-pub fn train_knn(k: usize, project_path: String) -> String {
-    match train_knn_help(k, project_path.clone()) {
-        Ok(_) => format!("Training finished"),
-        Err(e) => format!("Error training {project_path}: {e}"),
+pub fn train_knn(k: usize, examples: Vec<LabeledImage>) -> String {
+    let mut knn_images = KNN_IMAGES.lock().unwrap();
+    for example in examples {
+        knn_images.add_example((example.label, example.image));
     }
+    knn_images.set_k(k);
+    format!("Training finished; {} examples", knn_images.len())
 }
 
-pub fn classify_knn(img: ImageData) -> String {
-    let img = convert(&img);
+pub fn classify_knn(img: Vec<u8>) -> String {
     match KNN_IMAGES.lock() {
         Ok(knn_images) => {
             if knn_images.has_enough_examples() {
                 knn_images.classify(&img)
             } else {
-                "Need more examples".to_string()
+                format!("Need more examples; {} < {}", knn_images.len(), knn_images.get_k())
             }
         }
         Err(e) => format!("Lock error: {e}")
     }
-    /*
-    let knn_images = KNN_IMAGES.lock().unwrap();
-    return knn_images.classify(&img);
-    */
 }
 
 fn distance_rgba(img1: &RgbaImage, img2: &RgbaImage) -> f64 {
@@ -65,19 +63,10 @@ fn distance_rgba(img1: &RgbaImage, img2: &RgbaImage) -> f64 {
         .sum()
 }
 
-fn train_knn_help(k: usize, project_path: String) -> anyhow::Result<()> {
-    let labels = list(project_path.clone())?;
-    let mut training_set = Vec::new();
-    for label in labels {
-        for image_file in list(label.clone())? {
-            let loaded = image::io::Reader::open(format!("{project_path}/{label}/{image_file}"))?.decode()?.to_rgba8();
-            training_set.push((label.clone(), loaded));
-        }
-    }
-    let mut knn_images = KNN_IMAGES.lock().unwrap();
-    knn_images.train(&training_set);
-    knn_images.set_k(k);
-    Ok(())
+fn distance_u8(img1: &Vec<u8>, img2: &Vec<u8>) -> f64 {
+    (0..min(img1.len(), img2.len()))
+        .map(|i| (img1[i] as f64 - img2[i] as f64).powf(2.0))
+        .sum()
 }
 
 pub fn kmeans_ready() -> bool {
@@ -86,6 +75,12 @@ pub fn kmeans_ready() -> bool {
 
 pub fn training_time() -> i64 {
     TRAINING_TIME.load(Ordering::SeqCst) as i64
+}
+
+#[derive(Clone)]
+pub struct LabeledImage {
+    pub label: String,
+    pub image: Vec<u8>,
 }
 
 #[derive(Clone)]
@@ -323,29 +318,3 @@ pub fn parse_sensor_data(incoming_data: String) -> SensorData {
         right_speed: *parts.get("RS").unwrap(),
     }
 }
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FileSystemOutcome {
-    Success, Failure, NotAttempted
-}
-
-impl FileSystemOutcome {
-    fn from<V, E>(outcome: Result<V, E>) -> Self {
-        match outcome {
-            Ok(_) => Self::Success,
-            Err(_) => Self::Failure,
-        }
-    }
-}
-
-fn list(path: String) -> anyhow::Result<Vec<String>> {
-    let dir = std::fs::read_dir(path)?;
-    let mut list = vec![];
-    for entry in dir {
-        if let Ok(entry) = entry {
-            list.push(entry.file_name().to_str().unwrap().to_owned());
-        }
-    }
-    Ok(list)
-}
-

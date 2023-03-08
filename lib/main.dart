@@ -83,7 +83,7 @@ class SelectorPageState extends State<SelectorPage> {
   String currentLabel = "None";
   String _test = "Alpha";
 
-  List<PhotoInfo> _loadedPhotos = [];
+  List<PhotoInfo> loadedPhotos = [];
   int _currentPhoto = 0;
 
   Directory appDir() {
@@ -174,19 +174,19 @@ class SelectorPageState extends State<SelectorPage> {
           currentLabel = updatedLabels[0];
           refreshImages(0);
         } else {
-          _loadedPhotos = [];
+          loadedPhotos = [];
         }
       });
     });
   }
 
   Widget photoColumn() {
-    if (_loadedPhotos.isEmpty) {
+    if (loadedPhotos.isEmpty) {
       return const Text("No photos");
     } else {
       List<Widget> column = [];
-      column.add(SizedBox(height: 100, child: CustomPaint(painter: StillPhotoPainter(_loadedPhotos[_currentPhoto].photo))));
-      column.add(Text(_loadedPhotos[_currentPhoto].filename()));
+      column.add(SizedBox(height: 100, child: CustomPaint(painter: StillPhotoPainter(loadedPhotos[_currentPhoto].photo))));
+      column.add(Text(loadedPhotos[_currentPhoto].filename()));
 
       if (_currentPhoto > 0) {
         column.add(TextButton(onPressed: () { setState(() {
@@ -194,7 +194,7 @@ class SelectorPageState extends State<SelectorPage> {
         });}, child: const Text("Previous"),));
       }
 
-      if (_currentPhoto + 1 < _loadedPhotos.length) {
+      if (_currentPhoto + 1 < loadedPhotos.length) {
         column.add(TextButton(onPressed: () {setState(() {
           _currentPhoto += 1;
         });}, child: const Text("Next")));
@@ -209,7 +209,7 @@ class SelectorPageState extends State<SelectorPage> {
   void refreshImages(int photoChoice) {
     loadImages(Directory(_applicationSupportDir), currentProject, currentLabel).then((loaded) {
       setState(() {
-        _loadedPhotos = loaded;
+        loadedPhotos = loaded;
         _currentPhoto = photoChoice;
       });
     });
@@ -229,7 +229,7 @@ class SelectorPageState extends State<SelectorPage> {
   Widget takePhoto() {
     return makeCmdButton("Take Photo", Colors.orange, () {
       dartui.Image img = running!.livePicture().getImage();
-      int sizeBeforeSave = _loadedPhotos.length;
+      int sizeBeforeSave = loadedPhotos.length;
       saveImage(img, Directory(_applicationSupportDir), currentProject, currentLabel).then((value) {
         setState(() {
           otherMsg = value;
@@ -241,12 +241,12 @@ class SelectorPageState extends State<SelectorPage> {
 
   Widget deletePhoto() {
     return makeCmdButton("Delete Photo", Colors.red, () {
-      if (_loadedPhotos.isNotEmpty) {
-        File deleteMe = File(_loadedPhotos[_currentPhoto].filePath);
+      if (loadedPhotos.isNotEmpty) {
+        File deleteMe = File(loadedPhotos[_currentPhoto].filePath);
         deleteMe.delete().then((value) {
           setState(() {
             otherMsg = "deleted";
-            if (_loadedPhotos.length > 1) {
+            if (loadedPhotos.length > 1) {
               _currentPhoto -= 1;
             }
             refreshImages(_currentPhoto);

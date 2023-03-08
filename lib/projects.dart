@@ -2,6 +2,10 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as dartui;
 
+import 'package:vision_bot/robot.dart';
+
+import 'bridge_definitions.dart';
+
 const String projectDirName = "projects";
 
 String filenameFromPath(String path) {
@@ -94,6 +98,11 @@ class PhotoInfo {
   String filename() {
     return filePath.split("/").last;
   }
+
+  String label() {
+    List<String> parts = filePath.split("/");
+    return parts[filePath.length - 2];
+  }
 }
 
 Future<List<PhotoInfo>> loadImages(Directory fileSystemPath, String project, String label) async {
@@ -101,12 +110,32 @@ Future<List<PhotoInfo>> loadImages(Directory fileSystemPath, String project, Str
   Directory labelDir = Directory("${projectDir.path}/$project/$label");
   List<PhotoInfo> result = [];
   for (FileSystemEntity f in labelDir.listSync()) {
-    File file = File(f.path);
-    Uint8List data = await file.readAsBytes();
-    // From https://stackoverflow.com/a/64906539/906268
-    dartui.Codec codec = await dartui.instantiateImageCodec(data);
-    dartui.FrameInfo frame = await codec.getNextFrame();
-    result.add(PhotoInfo(frame.image, file.path));
+    dartui.Image img = await imageFromFile(File(f.path));
+    result.add(PhotoInfo(img, f.path));
   }
   return result;
+}
+
+Future<List<LabeledImage>> projectImages(Directory fileSystemPath, String project) async {
+  List<LabeledImage> result = [];
+  Directory mainDir = await getProjectDir(fileSystemPath);
+  Directory projectDir = Directory("${mainDir.path}/$project");
+  for (FileSystemEntity labelFile in projectDir.listSync()) {
+    Directory labelDir = Directory(labelFile.path);
+    for (FileSystemEntity imageFile in labelDir.listSync()) {
+      dartui.Image img = await imageFromFile(File(imageFile.path));
+      String label = labelFile.path.split("/").last;
+      Uint8List image = await imageBytes(img);
+      result.add(LabeledImage(label: label, image: image));
+    }
+  }
+  return result;
+}
+
+Future<dartui.Image> imageFromFile(File file) async {
+  Uint8List data = await file.readAsBytes();
+  // From https://stackoverflow.com/a/64906539/906268
+  dartui.Codec codec = await dartui.instantiateImageCodec(data);
+  dartui.FrameInfo frame = await codec.getNextFrame();
+  return frame.image;
 }

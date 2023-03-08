@@ -24,14 +24,14 @@ class NativeImpl implements Native {
       NativeImpl(module as ExternalLibrary);
   NativeImpl.raw(this._platform);
   Future<String> trainKnn(
-      {required int k, required String projectPath, dynamic hint}) {
+      {required int k, required List<LabeledImage> examples, dynamic hint}) {
     var arg0 = api2wire_usize(k);
-    var arg1 = _platform.api2wire_String(projectPath);
+    var arg1 = _platform.api2wire_list_labeled_image(examples);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_train_knn(port_, arg0, arg1),
       parseSuccessData: _wire2api_String,
       constMeta: kTrainKnnConstMeta,
-      argValues: [k, projectPath],
+      argValues: [k, examples],
       hint: hint,
     ));
   }
@@ -39,11 +39,11 @@ class NativeImpl implements Native {
   FlutterRustBridgeTaskConstMeta get kTrainKnnConstMeta =>
       const FlutterRustBridgeTaskConstMeta(
         debugName: "train_knn",
-        argNames: ["k", "projectPath"],
+        argNames: ["k", "examples"],
       );
 
-  Future<String> classifyKnn({required ImageData img, dynamic hint}) {
-    var arg0 = _platform.api2wire_box_autoadd_image_data(img);
+  Future<String> classifyKnn({required Uint8List img, dynamic hint}) {
+    var arg0 = _platform.api2wire_uint_8_list(img);
     return _platform.executeNormal(FlutterRustBridgeTask(
       callFfi: (port_) => _platform.inner.wire_classify_knn(port_, arg0),
       parseSuccessData: _wire2api_String,
@@ -341,6 +341,16 @@ class NativePlatform extends FlutterRustBridgeBase<NativeWire> {
   }
 
   @protected
+  ffi.Pointer<wire_list_labeled_image> api2wire_list_labeled_image(
+      List<LabeledImage> raw) {
+    final ans = inner.new_list_labeled_image_0(raw.length);
+    for (var i = 0; i < raw.length; ++i) {
+      _api_fill_to_wire_labeled_image(raw[i], ans.ref.ptr[i]);
+    }
+    return ans;
+  }
+
+  @protected
   ffi.Pointer<wire_uint_8_list> api2wire_uint_8_list(Uint8List raw) {
     final ans = inner.new_uint_8_list_0(raw.length);
     ans.ref.ptr.asTypedList(raw.length).setAll(0, raw);
@@ -364,6 +374,12 @@ class NativePlatform extends FlutterRustBridgeBase<NativeWire> {
     wireObj.height = api2wire_i64(apiObj.height);
     wireObj.uv_row_stride = api2wire_i64(apiObj.uvRowStride);
     wireObj.uv_pixel_stride = api2wire_i64(apiObj.uvPixelStride);
+  }
+
+  void _api_fill_to_wire_labeled_image(
+      LabeledImage apiObj, wire_LabeledImage wireObj) {
+    wireObj.label = api2wire_String(apiObj.label);
+    wireObj.image = api2wire_uint_8_list(apiObj.image);
   }
 }
 
@@ -465,25 +481,25 @@ class NativeWire implements FlutterRustBridgeWireBase {
   void wire_train_knn(
     int port_,
     int k,
-    ffi.Pointer<wire_uint_8_list> project_path,
+    ffi.Pointer<wire_list_labeled_image> examples,
   ) {
     return _wire_train_knn(
       port_,
       k,
-      project_path,
+      examples,
     );
   }
 
   late final _wire_train_knnPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(ffi.Int64, ffi.UintPtr,
-              ffi.Pointer<wire_uint_8_list>)>>('wire_train_knn');
-  late final _wire_train_knn = _wire_train_knnPtr
-      .asFunction<void Function(int, int, ffi.Pointer<wire_uint_8_list>)>();
+              ffi.Pointer<wire_list_labeled_image>)>>('wire_train_knn');
+  late final _wire_train_knn = _wire_train_knnPtr.asFunction<
+      void Function(int, int, ffi.Pointer<wire_list_labeled_image>)>();
 
   void wire_classify_knn(
     int port_,
-    ffi.Pointer<wire_ImageData> img,
+    ffi.Pointer<wire_uint_8_list> img,
   ) {
     return _wire_classify_knn(
       port_,
@@ -494,9 +510,9 @@ class NativeWire implements FlutterRustBridgeWireBase {
   late final _wire_classify_knnPtr = _lookup<
       ffi.NativeFunction<
           ffi.Void Function(
-              ffi.Int64, ffi.Pointer<wire_ImageData>)>>('wire_classify_knn');
+              ffi.Int64, ffi.Pointer<wire_uint_8_list>)>>('wire_classify_knn');
   late final _wire_classify_knn = _wire_classify_knnPtr
-      .asFunction<void Function(int, ffi.Pointer<wire_ImageData>)>();
+      .asFunction<void Function(int, ffi.Pointer<wire_uint_8_list>)>();
 
   void wire_kmeans_ready(
     int port_,
@@ -686,6 +702,21 @@ class NativeWire implements FlutterRustBridgeWireBase {
   late final _new_box_autoadd_image_data_0 = _new_box_autoadd_image_data_0Ptr
       .asFunction<ffi.Pointer<wire_ImageData> Function()>();
 
+  ffi.Pointer<wire_list_labeled_image> new_list_labeled_image_0(
+    int len,
+  ) {
+    return _new_list_labeled_image_0(
+      len,
+    );
+  }
+
+  late final _new_list_labeled_image_0Ptr = _lookup<
+      ffi.NativeFunction<
+          ffi.Pointer<wire_list_labeled_image> Function(
+              ffi.Int32)>>('new_list_labeled_image_0');
+  late final _new_list_labeled_image_0 = _new_list_labeled_image_0Ptr
+      .asFunction<ffi.Pointer<wire_list_labeled_image> Function(int)>();
+
   ffi.Pointer<wire_uint_8_list> new_uint_8_list_0(
     int len,
   ) {
@@ -720,6 +751,19 @@ class _Dart_Handle extends ffi.Opaque {}
 
 class wire_uint_8_list extends ffi.Struct {
   external ffi.Pointer<ffi.Uint8> ptr;
+
+  @ffi.Int32()
+  external int len;
+}
+
+class wire_LabeledImage extends ffi.Struct {
+  external ffi.Pointer<wire_uint_8_list> label;
+
+  external ffi.Pointer<wire_uint_8_list> image;
+}
+
+class wire_list_labeled_image extends ffi.Struct {
+  external ffi.Pointer<wire_LabeledImage> ptr;
 
   @ffi.Int32()
   external int len;

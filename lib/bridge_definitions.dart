@@ -8,11 +8,11 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 
 abstract class Native {
   Future<String> trainKnn(
-      {required int k, required String projectPath, dynamic hint});
+      {required int k, required List<LabeledImage> examples, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kTrainKnnConstMeta;
 
-  Future<String> classifyKnn({required ImageData img, dynamic hint});
+  Future<String> classifyKnn({required Uint8List img, dynamic hint});
 
   FlutterRustBridgeTaskConstMeta get kClassifyKnnConstMeta;
 
@@ -91,6 +91,16 @@ class ImageResponse {
   ImageResponse({
     required this.img,
     required this.msg,
+  });
+}
+
+class LabeledImage {
+  final String label;
+  final Uint8List image;
+
+  LabeledImage({
+    required this.label,
+    required this.image,
   });
 }
 

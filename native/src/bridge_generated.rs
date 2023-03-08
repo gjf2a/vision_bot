@@ -24,7 +24,7 @@ use std::sync::Arc;
 fn wire_train_knn_impl(
     port_: MessagePort,
     k: impl Wire2Api<usize> + UnwindSafe,
-    project_path: impl Wire2Api<String> + UnwindSafe,
+    examples: impl Wire2Api<Vec<LabeledImage>> + UnwindSafe,
 ) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
@@ -34,12 +34,12 @@ fn wire_train_knn_impl(
         },
         move || {
             let api_k = k.wire2api();
-            let api_project_path = project_path.wire2api();
-            move |task_callback| Ok(train_knn(api_k, api_project_path))
+            let api_examples = examples.wire2api();
+            move |task_callback| Ok(train_knn(api_k, api_examples))
         },
     )
 }
-fn wire_classify_knn_impl(port_: MessagePort, img: impl Wire2Api<ImageData> + UnwindSafe) {
+fn wire_classify_knn_impl(port_: MessagePort, img: impl Wire2Api<Vec<u8>> + UnwindSafe) {
     FLUTTER_RUST_BRIDGE_HANDLER.wrap(
         WrapInfo {
             debug_name: "classify_knn",

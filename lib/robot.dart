@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:vision_bot/projects.dart';
 
 import 'ffi.dart';
 import 'main.dart';
@@ -207,7 +208,8 @@ class KnnImageRunner extends VisionRunner {
                       ),
                       selector.makeChoices(selector.currentProject, selector.projects, (project) {
                         selector.currentProject = project;
-                        _livePicture.train(3, selector.appDir(), project).then((value) {selector.otherMsg = "Trained on $project: $value";});
+                        selector.refreshImages(0);
+                        _livePicture.train(3, selector.appDir(), selector.currentProject).then((value) {selector.otherMsg = "Trained on $project: $value";});
                       }),
                     ]
                 )
@@ -229,16 +231,24 @@ class KnnImagePainter extends CameraImagePainter {
 
   KnnImagePainter() : super(api.yuvRgba);
 
-  Future<String> train(int k, Directory path, String project) async {
-    return await api.trainKnn(k: k, projectPath: "${path.path}/$project");
+  Future<String> train(int k, Directory fileSystemPath, String project) async {
+    List<LabeledImage> packagedExamples = await projectImages(fileSystemPath, project);
+    return await api.trainKnn(k: k, examples: packagedExamples);
   }
 
   @override
   Future<void> setImage(CameraImage img) async {
     await super.setImage(img);
-    label = await api.classifyKnn(img: from(img));
+    Uint8List bytes = await imageBytes(getImage());
+    label = await api.classifyKnn(img: bytes);
   }
 }
+
+Future<Uint8List> imageBytes(dartui.Image img) async {
+  ByteData? bd = await img.toByteData();
+  return bd!.buffer.asUint8List();
+}
+
 
 class CameraImagePainter extends CustomPainter {
   late dartui.Image _lastImage;

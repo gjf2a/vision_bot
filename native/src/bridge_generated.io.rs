@@ -2,12 +2,12 @@ use super::*;
 // Section: wire functions
 
 #[no_mangle]
-pub extern "C" fn wire_train_knn(port_: i64, k: usize, project_path: *mut wire_uint_8_list) {
-    wire_train_knn_impl(port_, k, project_path)
+pub extern "C" fn wire_train_knn(port_: i64, k: usize, examples: *mut wire_list_labeled_image) {
+    wire_train_knn_impl(port_, k, examples)
 }
 
 #[no_mangle]
-pub extern "C" fn wire_classify_knn(port_: i64, img: *mut wire_ImageData) {
+pub extern "C" fn wire_classify_knn(port_: i64, img: *mut wire_uint_8_list) {
     wire_classify_knn_impl(port_, img)
 }
 
@@ -74,6 +74,15 @@ pub extern "C" fn new_box_autoadd_image_data_0() -> *mut wire_ImageData {
 }
 
 #[no_mangle]
+pub extern "C" fn new_list_labeled_image_0(len: i32) -> *mut wire_list_labeled_image {
+    let wrap = wire_list_labeled_image {
+        ptr: support::new_leak_vec_ptr(<wire_LabeledImage>::new_with_null_ptr(), len),
+        len,
+    };
+    support::new_leak_box_ptr(wrap)
+}
+
+#[no_mangle]
 pub extern "C" fn new_uint_8_list_0(len: i32) -> *mut wire_uint_8_list {
     let ans = wire_uint_8_list {
         ptr: support::new_leak_vec_ptr(Default::default(), len),
@@ -112,6 +121,23 @@ impl Wire2Api<ImageData> for wire_ImageData {
         }
     }
 }
+impl Wire2Api<LabeledImage> for wire_LabeledImage {
+    fn wire2api(self) -> LabeledImage {
+        LabeledImage {
+            label: self.label.wire2api(),
+            image: self.image.wire2api(),
+        }
+    }
+}
+impl Wire2Api<Vec<LabeledImage>> for *mut wire_list_labeled_image {
+    fn wire2api(self) -> Vec<LabeledImage> {
+        let vec = unsafe {
+            let wrap = support::box_from_leak_ptr(self);
+            support::vec_from_leak_ptr(wrap.ptr, wrap.len)
+        };
+        vec.into_iter().map(Wire2Api::wire2api).collect()
+    }
+}
 
 impl Wire2Api<Vec<u8>> for *mut wire_uint_8_list {
     fn wire2api(self) -> Vec<u8> {
@@ -134,6 +160,20 @@ pub struct wire_ImageData {
     height: i64,
     uv_row_stride: i64,
     uv_pixel_stride: i64,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_LabeledImage {
+    label: *mut wire_uint_8_list,
+    image: *mut wire_uint_8_list,
+}
+
+#[repr(C)]
+#[derive(Clone)]
+pub struct wire_list_labeled_image {
+    ptr: *mut wire_LabeledImage,
+    len: i32,
 }
 
 #[repr(C)]
@@ -165,6 +205,15 @@ impl NewWithNullPtr for wire_ImageData {
             height: Default::default(),
             uv_row_stride: Default::default(),
             uv_pixel_stride: Default::default(),
+        }
+    }
+}
+
+impl NewWithNullPtr for wire_LabeledImage {
+    fn new_with_null_ptr() -> Self {
+        Self {
+            label: core::ptr::null_mut(),
+            image: core::ptr::null_mut(),
         }
     }
 }
