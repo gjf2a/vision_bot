@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 import 'dart:ui' as dartui;
 
@@ -28,7 +29,7 @@ class SimpleImageRunner extends VisionRunner {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      CustomPaint(painter: _livePicture),
+                      SizedBox(width: 50, child: CustomPaint(painter: _livePicture)),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -61,7 +62,7 @@ class AkazeImageRunner extends VisionRunner {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      CustomPaint(painter: _livePicture),
+                      SizedBox(width: 50, child: CustomPaint(painter: _livePicture)),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -101,7 +102,7 @@ class AkazeImageFlowRunner extends VisionRunner {
                 child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: <Widget>[
-                      CustomPaint(painter: _livePicture),
+                      SizedBox(width: 50, child: CustomPaint(painter: _livePicture)),
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -209,7 +210,8 @@ class KnnImageRunner extends VisionRunner {
                       selector.makeChoices(selector.currentProject, selector.projects, (project) {
                         selector.currentProject = project;
                         selector.refreshImages(0);
-                        _livePicture.train(3, selector.appDir(), selector.currentProject).then((value) {selector.otherMsg = "Trained on $project: $value";});
+                        _livePicture.train(3, selector.appDir(), selector.currentProject)
+                            .then((value) {selector.otherMsg = "Trained on $project: $value";});
                       }),
                     ]
                 )
@@ -221,6 +223,19 @@ class KnnImageRunner extends VisionRunner {
   @override
   CameraImagePainter livePicture() {
     return _livePicture;
+  }
+
+  String getReply(String message, Queue<String> requests, Directory fileSystemPath) {
+    if (message.startsWith('knn')) {
+      List<String> parts = message.split(' ');
+      int k = int.parse(parts[1]);
+      _livePicture.train(k, fileSystemPath, parts[2]).then((value) {});
+      return "Training";
+    } else if (message == 'classify') {
+      return _livePicture.label;
+    } else {
+      return "Error: Not recognized";
+    }
   }
 }
 

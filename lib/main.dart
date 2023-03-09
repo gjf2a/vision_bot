@@ -63,6 +63,14 @@ class SelectorPage extends StatefulWidget {
 abstract class VisionRunner {
   Widget display(SelectorPageState selector);
   CameraImagePainter livePicture();
+
+  String getReply(String message, Queue<String> requests, Directory fileSystemPath) {
+    if (!requests.isEmpty) {
+      return requests.removeFirst();
+    } else {
+      return "None";
+    }
+  }
 }
 
 class SelectorPageState extends State<SelectorPage> {
@@ -306,14 +314,25 @@ class SelectorPageState extends State<SelectorPage> {
     socket.listen((data) {
       String msg = String.fromCharCodes(data);
       print("received $msg");
-      if (msg == "cmd") {
-        if (_requests.isEmpty) {
-          socket.write("None");
-        } else {
-          socket.write(_requests.removeFirst());
-        }
+      if (running != null) {
+        socket.write(running!.getReply(msg, _requests, appDir()));
       } else {
-        getProcessedData(msg);
+        // The "if" clause represents what I should really be doing on an
+        // engineering level - each VisionRunner should process incoming
+        // messages in its own way.
+        //
+        // This is old code I wrote when trying to build a SLAM navigator.
+        // It assumes a very specific robot layout.
+        // I should probably delete it, but I am hesitant for some reason.
+        if (msg == "cmd") {
+          if (_requests.isEmpty) {
+            socket.write("None");
+          } else {
+            socket.write(_requests.removeFirst());
+          }
+        } else {
+          getProcessedData(msg);
+        }
       }
       socket.close();
     });
