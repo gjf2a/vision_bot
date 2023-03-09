@@ -65,7 +65,7 @@ abstract class VisionRunner {
   CameraImagePainter livePicture();
 
   String getReply(String message, Queue<String> requests, Directory fileSystemPath) {
-    if (!requests.isEmpty) {
+    if (requests.isNotEmpty) {
       return requests.removeFirst();
     } else {
       return "None";
@@ -364,18 +364,14 @@ class SelectorPageState extends State<SelectorPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: <Widget>[
-                    Text(_applicationSupportDir),
+                    //Text(_applicationSupportDir),
                     Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
-                          selectorButton(
-                              "Image", Colors.blue, () => SimpleImageRunner()),
-                          selectorButton(
-                              "Akaze", Colors.cyan, () => AkazeImageRunner()),
-                          selectorButton(
-                              "Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
-                          selectorButton(
-                              "Photographer", Colors.yellow, () => PhotoImageRunner()),
+                          //selectorButton("Image", Colors.blue, () => SimpleImageRunner()),
+                          //selectorButton("Akaze", Colors.cyan, () => AkazeImageRunner()),
+                          //selectorButton("Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
+                          selectorButton("Photographer", Colors.yellow, () => PhotoImageRunner()),
                           selectorButton("Knn", Colors.deepPurple, () => KnnImageRunner()),
                         ]
                     )
@@ -444,7 +440,7 @@ class SelectorPageState extends State<SelectorPage> {
                   setState(() {cmd(options[index]);});
                   },
                 child: Text(
-                    "$element",
+                    element,
                   style: TextStyle(color: current == element ? Colors.red : Colors.blue),
                 ))).toList()),
       ],
