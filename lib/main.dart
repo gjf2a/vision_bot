@@ -199,12 +199,14 @@ class SelectorPageState extends State<SelectorPage> {
       if (_currentPhoto > 0) {
         column.add(TextButton(onPressed: () { setState(() {
           _currentPhoto -= 1;
+          print("prev: currentPhoto: $_currentPhoto");
         });}, child: const Text("Previous"),));
       }
 
       if (_currentPhoto + 1 < loadedPhotos.length) {
         column.add(TextButton(onPressed: () {setState(() {
           _currentPhoto += 1;
+          print("next: currentPhoto: $_currentPhoto");
         });}, child: const Text("Next")));
       }
 
@@ -215,10 +217,16 @@ class SelectorPageState extends State<SelectorPage> {
   }
 
   void refreshImages(int photoChoice) {
+    print("current: $currentProject $currentLabel");
     loadImages(Directory(_applicationSupportDir), currentProject, currentLabel).then((loaded) {
       setState(() {
         loadedPhotos = loaded;
+        print("Photos loaded");
+        for (int i = 0; i < loadedPhotos.length; i++) {
+          print("$i: ${loadedPhotos[i].filePath}");
+        }
         _currentPhoto = photoChoice;
+        print("refresh: currentPhoto: $_currentPhoto");
       });
     });
   }
@@ -254,8 +262,9 @@ class SelectorPageState extends State<SelectorPage> {
         deleteMe.delete().then((value) {
           setState(() {
             otherMsg = "deleted";
-            if (loadedPhotos.length > 1) {
+            if (_currentPhoto > 1) {
               _currentPhoto -= 1;
+              print("delete: currentPhoto: $_currentPhoto");
             }
             refreshImages(_currentPhoto);
           });
@@ -361,25 +370,20 @@ class SelectorPageState extends State<SelectorPage> {
               appBar: AppBar(
                   title: const Text("This is a title")),
               body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    //Text(_applicationSupportDir),
-                    Row(
+                child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
                           //selectorButton("Image", Colors.blue, () => SimpleImageRunner()),
                           //selectorButton("Akaze", Colors.cyan, () => AkazeImageRunner()),
                           //selectorButton("Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
-                          selectorButton("Photographer", Colors.yellow, () => PhotoImageRunner()),
+                          selectorButton("Photograph", Colors.yellow, () => PhotoImageRunner()),
+                          selectorButton("Projects", Colors.green, () => PhotoEditRunner()),
                           selectorButton("Knn", Colors.deepPurple, () => KnnImageRunner()),
                         ]
                     )
-                  ]
                 )
               )
-          )
-      );
+          );
     } else {
       return running!.display(this);
     }

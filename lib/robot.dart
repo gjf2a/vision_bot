@@ -152,6 +152,36 @@ class PhotoImageRunner extends VisionRunner  {
                           Text(selector.otherMsg),
                         ],
                       ),
+                      selector.projectChoices(),
+                      selector.labelChoices(),
+                    ]
+                )
+            )
+        )
+    );
+  }
+
+  @override
+  CameraImagePainter livePicture() {
+    return _livePicture;
+  }
+}
+
+
+
+class PhotoEditRunner extends VisionRunner  {
+  final CameraImagePainter _livePicture = CameraImagePainter(api.yuvRgba);
+
+  @override
+  Widget display(SelectorPageState selector) {
+    return MaterialApp(
+        home: Scaffold(
+            appBar: AppBar(
+                title: const Text("View/edit projects")),
+            body: Center(
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
                       Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[

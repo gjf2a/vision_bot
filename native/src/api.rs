@@ -37,6 +37,7 @@ lazy_static! {
 
 pub fn train_knn(k: usize, examples: Vec<LabeledImage>) -> String {
     let mut knn_images = KNN_IMAGES.lock().unwrap();
+    knn_images.clear_examples();
     for example in examples {
         knn_images.add_example((example.label, example.image));
     }

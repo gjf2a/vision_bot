@@ -4,6 +4,7 @@ use cv::{
     image::imageproc::drawing::BresenhamLinePixelIterMut,
 };
 use image::{ImageBuffer, Rgba, RgbaImage};
+use kmeans::Kmeans;
 use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 
@@ -194,4 +195,9 @@ impl KeyPointMovements {
         let end_mean = KeyPointInfo::point_mean(self.moves.iter().map(|(_, kpi)| *kpi));
         (start_mean, end_mean)
     }
+}
+
+pub struct BayesianAkaze {
+    means: Kmeans<KeyPointInfo, f64, fn(&KeyPointInfo,&KeyPointInfo) -> f64>
+    
 }

@@ -117,6 +117,7 @@ Future<List<PhotoInfo>> loadImages(Directory fileSystemPath, String project, Str
 }
 
 Future<List<LabeledImage>> projectImages(Directory fileSystemPath, String project) async {
+  print("projectImages start");
   List<LabeledImage> result = [];
   Directory mainDir = await getProjectDir(fileSystemPath);
   Directory projectDir = Directory("${mainDir.path}/$project");
@@ -126,9 +127,11 @@ Future<List<LabeledImage>> projectImages(Directory fileSystemPath, String projec
       dartui.Image img = await imageFromFile(File(imageFile.path));
       String label = labelFile.path.split("/").last;
       Uint8List image = await imageBytes(img);
+      print("Adding knn image ${labelFile.path}");
       result.add(LabeledImage(label: label, image: image));
     }
   }
+  print("projectImages end");
   return result;
 }
 
