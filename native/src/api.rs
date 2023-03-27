@@ -17,13 +17,12 @@ use std::{
 };
 
 use crate::image_proc::{
-    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple,
+    convert, inner_yuv_rgba, simple_yuv_rgb, KeyPointMovements, U8ColorTriple, KeyPointInfo, kp_distance_f64, kp_feature_distance_f64,
 };
 
 lazy_static! {
     static ref POS: Mutex<RobotSensorPosition> = Mutex::new(RobotSensorPosition::new(BOT));
-    static ref RGB_MEANS: Mutex<Option<Kmeans<U8ColorTriple, f64, fn(&U8ColorTriple, &U8ColorTriple) -> f64>>> =
-        Mutex::new(None);
+    static ref RGB_MEANS: Mutex<Option<Kmeans<U8ColorTriple, f64>>> = Mutex::new(None);
     static ref KMEANS_READY: AtomicBool = AtomicBool::new(false);
     static ref TRAINING_TIME: AtomicU64 = AtomicU64::new(0);
     static ref TOTAL_KEYPOINTS: AtomicU64 = AtomicU64::new(0);
@@ -32,14 +31,16 @@ lazy_static! {
     static ref ALL_FEATURES: Arc<Mutex<HashSet<BitArray<64>>>> =
         Arc::new(Mutex::new(HashSet::new()));
 
-    static ref KNN_IMAGES: Arc<Mutex<Knn<String, Vec<u8>, f64, fn(&Vec<u8>,&Vec<u8>) -> f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_u8))));
+    static ref KNN_IMAGES: Arc<Mutex<Knn<String, Vec<u8>, f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_u8))));
+    static ref KNN_AKAZE_POS: Arc<Mutex<Knn<String, Vec<KeyPointInfo>, f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_keypoint_positions))));
+    static ref KNN_AKAZE_FEATURE: Arc<Mutex<Knn<String, Vec<KeyPointInfo>, f64>>> = Arc::new(Mutex::new(Knn::new(3, Arc::new(distance_keypoint_features))));
 }
 
 pub fn train_knn(k: usize, examples: Vec<LabeledImage>) -> String {
     let mut knn_images = KNN_IMAGES.lock().unwrap();
     knn_images.clear_examples();
     for example in examples {
-        knn_images.add_example((example.label, example.image));
+        knn_images.add_example((example.label, example.image.bytes));
     }
     knn_images.set_k(k);
     format!("Training finished; {} examples", knn_images.len())
@@ -50,6 +51,56 @@ pub fn classify_knn(img: Vec<u8>) -> String {
         Ok(knn_images) => {
             if knn_images.has_enough_examples() {
                 knn_images.classify(&img)
+            } else {
+                format!("Need more examples; {} < {}", knn_images.len(), knn_images.get_k())
+            }
+        }
+        Err(e) => format!("Lock error: {e}")
+    }
+}
+
+pub fn train_knn_akaze_pos(k: usize, examples: Vec<LabeledImage>) -> String {
+    let mut knn_images = KNN_AKAZE_POS.lock().unwrap();
+    knn_images.clear_examples();
+    for example in examples {
+        knn_images.add_example((example.label, example.image.akazeify()));
+    }
+    knn_images.set_k(k);
+    format!("Training finished; {} examples", knn_images.len())
+}
+
+pub fn train_knn_akaze_features(k: usize, examples: Vec<LabeledImage>) -> String {
+    let mut knn_images = KNN_AKAZE_FEATURE.lock().unwrap();
+    knn_images.clear_examples();
+    for example in examples {
+        knn_images.add_example((example.label, example.image.akazeify()));
+    }
+    knn_images.set_k(k);
+    format!("Training finished; {} examples", knn_images.len())
+}
+
+
+
+pub fn classify_knn_akaze_pos(img: DartImage) -> String {
+    match KNN_AKAZE_POS.lock() {
+        Ok(knn_images) => {
+            if knn_images.has_enough_examples() {
+                let akazed = img.akazeify();
+                knn_images.classify(&akazed)
+            } else {
+                format!("Need more examples; {} < {}", knn_images.len(), knn_images.get_k())
+            }
+        }
+        Err(e) => format!("Lock error: {e}")
+    }
+}
+
+pub fn classify_knn_akaze_feature(img: DartImage) -> String {
+    match KNN_AKAZE_FEATURE.lock() {
+        Ok(knn_images) => {
+            if knn_images.has_enough_examples() {
+                let akazed = img.akazeify();
+                knn_images.classify(&akazed)
             } else {
                 format!("Need more examples; {} < {}", knn_images.len(), knn_images.get_k())
             }
@@ -70,6 +121,19 @@ fn distance_u8(img1: &Vec<u8>, img2: &Vec<u8>) -> f64 {
         .sum()
 }
 
+fn distance_keypoint_positions(img1: &Vec<KeyPointInfo>, img2: &Vec<KeyPointInfo>) -> f64 {
+    (0..min(img1.len(), img2.len()))
+        .map(|i| kp_distance_f64(&img1[i].point, &img2[i].point))
+        .sum()
+}
+
+fn distance_keypoint_features(img1: &Vec<KeyPointInfo>, img2: &Vec<KeyPointInfo>) -> f64 {
+    (0..min(img1.len(), img2.len()))
+        .map(|i| kp_feature_distance_f64(&img1[i].feature, &img2[i].feature))
+        .sum()
+}
+
+
 pub fn kmeans_ready() -> bool {
     KMEANS_READY.load(Ordering::SeqCst)
 }
@@ -79,9 +143,41 @@ pub fn training_time() -> i64 {
 }
 
 #[derive(Clone)]
+pub struct DartImage {
+    pub bytes: Vec<u8>,
+    pub width: i64,
+    pub height: i64,
+}
+
+impl Default for DartImage {
+    fn default() -> Self {
+        Self { bytes: vec![], width: 0, height: 0 }
+    }
+}
+
+impl DartImage {
+    fn akazeify(&self) -> Vec<KeyPointInfo> {
+        let mut img = RgbaImage::new(self.width as u32, self.height as u32);
+        for i in (0..self.bytes.len()).step_by(4) {
+            let mut pixel_bytes = [0; 4];
+            pixel_bytes.clone_from_slice(&self.bytes[i..i+4]);
+            let x = (i as u32 / 4) % self.width as u32;
+            let y = (i as u32 / 4) / self.width as u32;
+            img.put_pixel(x, y, Rgba(pixel_bytes));
+        }
+        let wrapped = DynamicImage::ImageRgba8(img);
+        let akaze = Akaze::dense();
+        let (keypoints, features) = akaze.extract(&wrapped);
+        keypoints.iter().zip(features.iter())
+            .map(|(point, feature)| KeyPointInfo {point: *point, feature: *feature})
+            .collect()
+    }
+}
+
+#[derive(Clone)]
 pub struct LabeledImage {
     pub label: String,
-    pub image: Vec<u8>,
+    pub image: DartImage,
 }
 
 #[derive(Clone)]

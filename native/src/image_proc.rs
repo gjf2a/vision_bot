@@ -4,7 +4,6 @@ use cv::{
     image::imageproc::drawing::BresenhamLinePixelIterMut,
 };
 use image::{ImageBuffer, Rgba, RgbaImage};
-use kmeans::Kmeans;
 use ordered_float::OrderedFloat;
 use std::cmp::{max, min};
 
@@ -72,25 +71,34 @@ pub fn correspondences(
 
 #[derive(Copy, Clone)]
 pub struct KeyPointInfo {
-    point: KeyPoint,
-    feature: BitArray<64>,
+    pub point: KeyPoint,
+    pub feature: BitArray<64>,
 }
 
-/*pub fn distance(kp1: &KeyPointInfo, kp2: &KeyPointInfo) -> f32 {
-    ((kp1.point.point.0 - kp2.point.point.0).powf(2.0)
-        + (kp1.point.point.1 - kp2.point.point.1).powf(2.0))
-    .sqrt()
-}*/
-
-pub fn distance(kp1: &KeyPoint, kp2: &KeyPoint) -> OrderedFloat<f32> {
+pub fn kp_distance(kp1: &KeyPoint, kp2: &KeyPoint) -> OrderedFloat<f32> {
     OrderedFloat(
         ((kp1.point.0 - kp2.point.0).powf(2.0) + (kp1.point.1 - kp2.point.1).powf(2.0)).sqrt(),
     )
 }
 
-pub fn heading(kp1: &KeyPointInfo, kp2: &KeyPointInfo) -> f32 {
+pub fn kp_distance_f64(kp1: &KeyPoint, kp2: &KeyPoint) -> f64 {
+    ((kp1.point.0 as f64 - kp2.point.0 as f64)).powf(2.0) + ((kp1.point.1 as f64 - kp2.point.1 as f64)).powf(2.0)
+}
+
+pub fn kp_feature_distance_f64(f1: &BitArray<64>, f2: &BitArray<64>) -> f64 {
+    f1.distance(&f2) as f64
+}
+
+pub fn kpi_distance(kpi1: &KeyPointInfo, kpi2: &KeyPointInfo, kpi_weight: f32) -> OrderedFloat<f32> {
+    OrderedFloat(kpi1.feature.distance(&kpi2.feature) as f32 * kpi_weight) + kp_distance(&kpi1.point, &kpi2.point)
+}
+
+/*
+// Probably don't need it.
+pub fn kp_heading(kp1: &KeyPointInfo, kp2: &KeyPointInfo) -> f32 {
     (kp2.point.point.1 - kp1.point.point.1).atan2(kp2.point.point.0 - kp1.point.point.0)
 }
+*/
 
 impl KeyPointInfo {
     pub fn point_mean<I: Iterator<Item = Self>>(iter: I) -> (f32, f32) {
@@ -129,7 +137,7 @@ impl KeyPointMovements {
         features: &Vec<BitArray<64>>,
     ) -> Self {
         let matches =
-            stable_matching::stable_matching_distance(last_keypoints, keypoints, distance);
+            stable_matching::stable_matching_distance(last_keypoints, keypoints, kp_distance);
         Self::from_matches(&matches, last_keypoints, last_features, keypoints, features)
     }
 
@@ -159,6 +167,9 @@ impl KeyPointMovements {
         }
     }
 
+    /*
+    // Unused. I don't remember what I had in mind for it. Hanging on
+    // to it for now... 
     pub fn render_on(&self, img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, color: [u8; 4]) {
         for (last_kp, kp) in self.moves.iter().copied() {
             let (x1, y1) = last_kp.point.point;
@@ -168,6 +179,7 @@ impl KeyPointMovements {
             }
         }
     }
+    */
 
     pub fn render_mean_on(&self, img: &mut ImageBuffer<Rgba<u8>, Vec<u8>>, color: [u8; 4]) {
         let (start, end) = self.mean();
@@ -176,28 +188,9 @@ impl KeyPointMovements {
         }
     }
 
-    /*
-    pub fn median_magnitude(&self) -> f32 {
-        let mut magnitudes = self.moves.iter().map(|(k1, k2)| OrderedFloat(distance(k1, k2))).collect::<Vec<_>>();
-        magnitudes.sort_unstable();
-        magnitudes[magnitudes.len() / 2].into()
-    }
-
-    pub fn median_orientation(&self) -> f32 {
-        let mut orientations = self.moves.iter().map(|(k1, k2)| OrderedFloat(heading(k1, k2))).collect::<Vec<_>>();
-        orientations.sort_unstable();
-
-    }
-    */
-
     pub fn mean(&self) -> ((f32, f32), (f32, f32)) {
         let start_mean = KeyPointInfo::point_mean(self.moves.iter().map(|(kpi, _)| *kpi));
         let end_mean = KeyPointInfo::point_mean(self.moves.iter().map(|(_, kpi)| *kpi));
         (start_mean, end_mean)
     }
-}
-
-pub struct BayesianAkaze {
-    means: Kmeans<KeyPointInfo, f64, fn(&KeyPointInfo,&KeyPointInfo) -> f64>
-    
 }

@@ -378,7 +378,9 @@ class SelectorPageState extends State<SelectorPage> {
                           //selectorButton("Akaze Flow", Colors.green, () => AkazeImageFlowRunner()),
                           selectorButton("Photograph", Colors.yellow, () => PhotoImageRunner()),
                           selectorButton("Projects", Colors.green, () => PhotoEditRunner()),
-                          selectorButton("Knn", Colors.deepPurple, () => KnnImageRunner()),
+                          selectorButton("Knn", Colors.deepPurple, () => KnnImageRunner(KnnImagePainter())),
+                          selectorButton("KnnPosition", Colors.deepOrange, () => KnnImageRunner(KnnPosPainter())),
+                          selectorButton("KnnFeature", Colors.indigoAccent, () => KnnImageRunner(KnnPosPainter())),
                         ]
                     )
                 )

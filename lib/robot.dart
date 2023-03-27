@@ -87,8 +87,6 @@ class AkazeImageRunner extends VisionRunner {
   }
 }
 
-
-
 class AkazeImageFlowRunner extends VisionRunner {
   final CameraImagePainter _livePicture = CameraImagePainter(api.akazeFlow);
 
@@ -213,7 +211,8 @@ class PhotoEditRunner extends VisionRunner  {
 }
 
 class KnnImageRunner extends VisionRunner {
-  final KnnImagePainter _livePicture = KnnImagePainter();
+  final KnnPainter _livePicture;
+  KnnImageRunner(this._livePicture);
 
   @override
   Widget display(SelectorPageState selector) {
@@ -234,7 +233,7 @@ class KnnImageRunner extends VisionRunner {
                           Text(selector.incoming),
                           Text(_livePicture.lastMessage),
                           Text(selector.otherMsg),
-                          Text("Classification: ${_livePicture.label}"),
+                          Text("Classification: ${_livePicture.getLabel()}"),
                         ],
                       ),
                       selector.makeChoices(selector.currentProject, selector.projects, (project) {
@@ -262,22 +261,30 @@ class KnnImageRunner extends VisionRunner {
       _livePicture.train(k, fileSystemPath, parts[2]).then((value) {});
       return "Training";
     } else if (message == 'classify') {
-      return _livePicture.label;
+      return _livePicture.getLabel();
     } else {
       return "Error: Not recognized";
     }
   }
 }
 
+abstract class KnnPainter extends CameraImagePainter {
+  KnnPainter(super.imageMaker);
+
+  String getLabel();
+  Future<String> train(int k, Directory fileSystemPath, String project);
+}
+
 // Plan: This class sets up the Knn and intercepts images and classifies them.
 // We may need an "intermediate" UI to pick the project and set k.
-class KnnImagePainter extends CameraImagePainter {
+class KnnImagePainter extends KnnPainter {
   String label = "None";
 
   KnnImagePainter() : super(api.yuvRgba);
 
   Future<String> train(int k, Directory fileSystemPath, String project) async {
     List<LabeledImage> packagedExamples = await projectImages(fileSystemPath, project);
+    print("****number of examples****: ${packagedExamples.length}");
     return await api.trainKnn(k: k, examples: packagedExamples);
   }
 
@@ -287,9 +294,52 @@ class KnnImagePainter extends CameraImagePainter {
     Uint8List bytes = await imageBytes(getImage());
     label = await api.classifyKnn(img: bytes);
   }
+
+  String getLabel() {return label;}
+}
+
+class KnnPosPainter extends KnnPainter {
+  String label = "None";
+
+  KnnPosPainter() : super(api.yuvRgba);
+
+  Future<String> train(int k, Directory fileSystemPath, String project) async {
+    List<LabeledImage> packagedExamples = await projectImages(fileSystemPath, project);
+    return await api.trainKnnAkazePos(k: k, examples: packagedExamples);
+  }
+
+  @override
+  Future<void> setImage(CameraImage img) async {
+    await super.setImage(img);
+    DartImage image = await dartImageFrom(getImage());
+    label = await api.classifyKnnAkazePos(img: image);
+  }
+
+  String getLabel() {return label;}
+}
+
+class KnnFeaturePainter extends KnnPainter {
+  String label = "None";
+
+  KnnFeaturePainter() : super(api.yuvRgba);
+
+  Future<String> train(int k, Directory fileSystemPath, String project) async {
+    List<LabeledImage> packagedExamples = await projectImages(fileSystemPath, project);
+    return await api.trainKnnAkazeFeatures(k: k, examples: packagedExamples);
+  }
+
+  @override
+  Future<void> setImage(CameraImage img) async {
+    await super.setImage(img);
+    DartImage image = await dartImageFrom(getImage());
+    label = await api.classifyKnnAkazeFeature(img: image);
+  }
+
+  String getLabel() {return label;}
 }
 
 Future<Uint8List> imageBytes(dartui.Image img) async {
+  // Converting to bytes: https://api.flutter.dev/flutter/dart-ui/Image/toByteData.html
   ByteData? bd = await img.toByteData();
   return bd!.buffer.asUint8List();
 }

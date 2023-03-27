@@ -116,6 +116,11 @@ Future<List<PhotoInfo>> loadImages(Directory fileSystemPath, String project, Str
   return result;
 }
 
+Future<DartImage> dartImageFrom(dartui.Image img) async {
+  Uint8List image = await imageBytes(img);
+  return DartImage(bytes: image, width: img.width, height: img.height);
+}
+
 Future<List<LabeledImage>> projectImages(Directory fileSystemPath, String project) async {
   print("projectImages start");
   List<LabeledImage> result = [];
@@ -126,7 +131,7 @@ Future<List<LabeledImage>> projectImages(Directory fileSystemPath, String projec
     for (FileSystemEntity imageFile in labelDir.listSync()) {
       dartui.Image img = await imageFromFile(File(imageFile.path));
       String label = labelFile.path.split("/").last;
-      Uint8List image = await imageBytes(img);
+      DartImage image = await dartImageFrom(img);
       print("Adding knn image ${labelFile.path}");
       result.add(LabeledImage(label: label, image: image));
     }
